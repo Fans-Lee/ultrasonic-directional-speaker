@@ -1,0 +1,14 @@
+# Local backups and generated inspection/build artifacts
+*.zip
+*.inspect.ndjson
+*.pyc
+**/__pycache__/
+work/
+ppt_build_kaoti/
+超声定向音响-开题交流报告/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
