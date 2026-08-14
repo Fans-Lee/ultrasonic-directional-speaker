@@ -11,9 +11,9 @@
 
 目前已经搭建的是 4 列×3 行、共 12 个 TCT40-16T 的最小原型，而不是本总方案中的 96 阵元整机。该原型使用 1 块 ESP32-S3、4 片 TC4428A 和 12 V 供电，用于验证发射链路、调制、方向性及测试方法。
 
-- [08-当前12阵元原型.md](08-当前12阵元原型.md)：当前实物状态、简明接线、物资和阶段结论；
-- [esp32_s3_4x3_min_test/README.md](esp32_s3_4x3_min_test/README.md)：逐针施工接线、上电步骤和串口命令；
-- [esp32_s3_4x3_min_test/esp32_s3_4x3_min_test.ino](esp32_s3_4x3_min_test/esp32_s3_4x3_min_test.ino)：可直接编译的测试固件；
+- [08-当前12阵元原型.md](docs/08-当前12阵元原型.md)：当前实物状态、简明接线、物资和阶段结论；
+- [固件 README](src/esp32_s3_4x3_min_test/README.md)：逐针施工接线、上电步骤和串口命令；
+- [esp32_s3_4x3_min_test.ino](src/esp32_s3_4x3_min_test/esp32_s3_4x3_min_test.ino)：可直接编译的测试固件；
 - 01～07 文档描述的是从当前原型继续扩展到 96 阵元、8/16 通道系统的完整路线。
 
 ---
