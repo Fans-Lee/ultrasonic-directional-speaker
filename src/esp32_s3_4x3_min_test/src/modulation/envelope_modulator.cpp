@@ -35,9 +35,17 @@ ModulationFrame EnvelopeModulator::nextFrame() {
 
   frame.status = ModulationFrameStatus::kRunning;
   frame.duty = dutyTable_[sampleIndex_];
-  frame.intervalUs = 1000000UL / kSampleRate;
+  frame.sampleRateHz = kSampleRate;
   sampleIndex_ = (sampleIndex_ + 1) % kSampleCount;
   return frame;
+}
+
+ModulationFrameStatus EnvelopeModulator::skipFrames(uint32_t frameCount) {
+  if (!initialized_) return ModulationFrameStatus::kIdle;
+
+  sampleIndex_ = static_cast<uint8_t>(
+      (sampleIndex_ + frameCount % kSampleCount) % kSampleCount);
+  return ModulationFrameStatus::kRunning;
 }
 
 }  // namespace ultrasonic

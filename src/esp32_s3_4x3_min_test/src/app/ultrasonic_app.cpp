@@ -7,7 +7,7 @@ constexpr uint32_t kCommandQueueLength = 8;
 constexpr uint32_t kControlTaskStackBytes = 4096;
 constexpr uint32_t kPlaybackTaskStackBytes = 4096;
 constexpr UBaseType_t kControlTaskPriority = 2;
-constexpr UBaseType_t kPlaybackTaskPriority = 4;
+constexpr UBaseType_t kPlaybackTaskPriority = 8;
 
 }  // namespace
 
@@ -21,25 +21,48 @@ esp_err_t UltrasonicApp::begin() {
   commandQueue_ = xQueueCreate(kCommandQueueLength, sizeof(Command));
   if (commandQueue_ == nullptr) return ESP_ERR_NO_MEM;
 
-  esp_timer_create_args_t timerArgs = {};
-  timerArgs.callback = &UltrasonicApp::timerEntry;
-  timerArgs.arg = this;
-  timerArgs.dispatch_method = ESP_TIMER_TASK;
-  timerArgs.name = "ultra_tick";
+  gptimer_config_t timerConfig = {};
+  timerConfig.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+  timerConfig.direction = GPTIMER_COUNT_UP;
+  timerConfig.resolution_hz = kSampleTimerResolutionHz;
 
-  esp_err_t error = esp_timer_create(&timerArgs, &sampleTimer_);
+  esp_err_t error = gptimer_new_timer(&timerConfig, &sampleTimer_);
   if (error != ESP_OK) {
     vQueueDelete(commandQueue_);
     commandQueue_ = nullptr;
     return error;
   }
 
-  BaseType_t taskResult = xTaskCreate(
+  gptimer_event_callbacks_t timerCallbacks = {};
+  timerCallbacks.on_alarm = &UltrasonicApp::timerEntry;
+  error = gptimer_register_event_callbacks(
+      sampleTimer_, &timerCallbacks, this);
+  if (error != ESP_OK) {
+    gptimer_del_timer(sampleTimer_);
+    sampleTimer_ = nullptr;
+    vQueueDelete(commandQueue_);
+    commandQueue_ = nullptr;
+    return error;
+  }
+
+  error = gptimer_enable(sampleTimer_);
+  if (error != ESP_OK) {
+    gptimer_del_timer(sampleTimer_);
+    sampleTimer_ = nullptr;
+    vQueueDelete(commandQueue_);
+    commandQueue_ = nullptr;
+    return error;
+  }
+
+  // GPTimer 中断在当前核心注册；播放任务固定到同一核心，避免跨核通知抖动。
+  const BaseType_t playbackCore = xPortGetCoreID();
+  BaseType_t taskResult = xTaskCreatePinnedToCore(
       &UltrasonicApp::playbackTaskEntry, "ultra_playback",
       kPlaybackTaskStackBytes, this, kPlaybackTaskPriority,
-      &playbackTaskHandle_);
+      &playbackTaskHandle_, playbackCore);
   if (taskResult != pdPASS) {
-    esp_timer_delete(sampleTimer_);
+    gptimer_disable(sampleTimer_);
+    gptimer_del_timer(sampleTimer_);
     sampleTimer_ = nullptr;
     vQueueDelete(commandQueue_);
     commandQueue_ = nullptr;
@@ -53,7 +76,8 @@ esp_err_t UltrasonicApp::begin() {
   if (taskResult != pdPASS) {
     vTaskDelete(playbackTaskHandle_);
     playbackTaskHandle_ = nullptr;
-    esp_timer_delete(sampleTimer_);
+    gptimer_disable(sampleTimer_);
+    gptimer_del_timer(sampleTimer_);
     sampleTimer_ = nullptr;
     vQueueDelete(commandQueue_);
     commandQueue_ = nullptr;
@@ -71,11 +95,24 @@ void UltrasonicApp::playbackTaskEntry(void* context) {
   static_cast<UltrasonicApp*>(context)->playbackTask();
 }
 
-void UltrasonicApp::timerEntry(void* context) {
+bool IRAM_ATTR UltrasonicApp::timerEntry(
+    gptimer_handle_t timer, const gptimer_alarm_event_data_t* eventData,
+    void* context) {
+  (void)timer;
+  (void)eventData;
   auto* app = static_cast<UltrasonicApp*>(context);
-  if (app->playbackTaskHandle_ != nullptr) {
-    xTaskNotify(app->playbackTaskHandle_, kTimerEvent, eSetBits);
+  if (app->playbackTaskHandle_ == nullptr) return false;
+
+  portENTER_CRITICAL_ISR(&app->timerMux_);
+  if (app->pendingTimerTicks_ != UINT32_MAX) {
+    ++app->pendingTimerTicks_;
   }
+  portEXIT_CRITICAL_ISR(&app->timerMux_);
+
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
+  xTaskNotifyFromISR(app->playbackTaskHandle_, kTimerEvent, eSetBits,
+                     &higherPriorityTaskWoken);
+  return higherPriorityTaskWoken == pdTRUE;
 }
 
 void UltrasonicApp::controlTask() {
@@ -91,17 +128,20 @@ void UltrasonicApp::playbackTask() {
     uint32_t events = 0;
     xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
 
+    bool timingReconfigured = false;
     if ((events & kCommandEvent) != 0) {
       Command command = {};
       while (xQueueReceive(commandQueue_, &command, 0) == pdTRUE) {
-        handleCommand(command);
+        timingReconfigured =
+            handleCommand(command) || timingReconfigured;
       }
-
-      // 模式切换会自行重新布置定时器；忽略与命令同时到达的旧定时事件。
-      continue;
     }
 
-    if ((events & kTimerEvent) != 0) renderTimedSample();
+    // D/S 只改变下次播放方式，不重置当前节拍；其余命令会重置定时器，
+    // 因而必须丢弃与这些命令同时到达的旧节拍。
+    if ((events & kTimerEvent) != 0 && !timingReconfigured) {
+      processTimerTicks();
+    }
   }
 }
 
@@ -181,37 +221,41 @@ bool UltrasonicApp::enqueue(CommandType type, uint8_t channel) {
   return true;
 }
 
-void UltrasonicApp::handleCommand(const Command& command) {
+bool UltrasonicApp::handleCommand(const Command& command) {
   switch (command.type) {
     case CommandType::kStop:
       stopOutput();
-      break;
+      return true;
     case CommandType::kSingle:
       startSingle(command.channel);
-      break;
+      return true;
     case CommandType::kAllCarrier:
       startAllCarrier();
-      break;
+      return true;
     case CommandType::kEnvelopeTone:
       startEnvelopeTone();
-      break;
+      return true;
     case CommandType::kUseDsbAm:
       selectAudioModulation(AudioModulationMode::kDsbAm);
-      break;
+      return false;
     case CommandType::kUseSram:
       selectAudioModulation(AudioModulationMode::kSram);
-      break;
+      return false;
     case CommandType::kAudioOnce:
       startAudio(false);
-      break;
+      return true;
     case CommandType::kAudioLoop:
       startAudio(true);
-      break;
+      return true;
   }
+
+  return false;
 }
 
 void UltrasonicApp::startSingle(uint8_t channel) {
   stopSampleTimer();
+  reportTimingStats();
+  resetTimingStats();
   modulationEngine_.stop();
   if (!applyDriverResult(driver_.stop(), "clear channels")) return;
   if (!applyDriverResult(
@@ -226,6 +270,8 @@ void UltrasonicApp::startSingle(uint8_t channel) {
 
 void UltrasonicApp::startAllCarrier() {
   stopSampleTimer();
+  reportTimingStats();
+  resetTimingStats();
   modulationEngine_.stop();
   if (!applyDriverResult(
           driver_.setAllDuty(UltrasonicDriver::kHalfDuty),
@@ -238,13 +284,14 @@ void UltrasonicApp::startAllCarrier() {
 
 void UltrasonicApp::startEnvelopeTone() {
   stopSampleTimer();
+  reportTimingStats();
+  resetTimingStats();
   if (!modulationEngine_.startEnvelopeTone()) {
     Serial.println("MODULATION ERROR: envelope modulator is not ready");
     stopOutput(false);
     return;
   }
 
-  nextSampleUs_ = esp_timer_get_time();
   Serial.println(
       "TEST TONE: 40 kHz carrier with 1 kHz sine envelope on four columns");
   Serial.println("This is only a bench test; the audible tone may be weak.");
@@ -259,6 +306,8 @@ void UltrasonicApp::selectAudioModulation(AudioModulationMode mode) {
 
 void UltrasonicApp::startAudio(bool loop) {
   stopSampleTimer();
+  reportTimingStats();
+  resetTimingStats();
   if (!modulationEngine_.startAudio(loop)) {
     Serial.println("AUDIO ERROR: src/data/audio_data.h contains no valid samples");
     stopOutput(false);
@@ -268,7 +317,6 @@ void UltrasonicApp::startAudio(bool loop) {
   const AudioInfo audio = modulationEngine_.audioInfo();
   const char* modulationName = audioModulationModeName(
       modulationEngine_.audioModulationMode());
-  nextSampleUs_ = esp_timer_get_time();
   Serial.printf("AUDIO %s %s: %lu samples at %lu Hz (%.2f s)\r\n",
                 modulationName,
                 loop ? "LOOP" : "PLAY ONCE",
@@ -287,6 +335,8 @@ void UltrasonicApp::stopOutput(bool printStatus) {
     Serial.println(
         "OUTPUT OFF (PWM stopped; switch off driver 12 V before rewiring)");
   }
+  reportTimingStats();
+  resetTimingStats();
 }
 
 void UltrasonicApp::renderTimedSample() {
@@ -299,41 +349,116 @@ void UltrasonicApp::renderTimedSample() {
   }
 
   if (frame.status == ModulationFrameStatus::kCompleted) {
-    applyDriverResult(driver_.stop(), "finish audio");
-    Serial.println("AUDIO DONE; output stopped");
+    completeAudioPlayback();
     return;
   }
 
-  scheduleNextSample(frame.intervalUs);
+  if (!sampleTimerRunning_) startSampleTimer(frame.sampleRateHz);
 }
 
-void UltrasonicApp::scheduleNextSample(uint32_t intervalUs) {
-  if (intervalUs == 0) {
-    applyDriverResult(ESP_ERR_INVALID_ARG, "schedule sample");
-    return;
+void UltrasonicApp::processTimerTicks() {
+  const uint32_t elapsedTicks = takePendingTimerTicks();
+  if (elapsedTicks == 0) return;
+
+  if (elapsedTicks > maximumTimerBacklog_) {
+    maximumTimerBacklog_ = elapsedTicks;
   }
 
-  nextSampleUs_ += intervalUs;
-  const int64_t nowUs = esp_timer_get_time();
-
-  // 丢弃严重过时的节拍，避免任务恢复后连续补播旧样本。
-  if (nowUs - nextSampleUs_ >= static_cast<int64_t>(intervalUs)) {
-    nextSampleUs_ = nowUs + intervalUs;
+  if (elapsedTicks > 1) {
+    const uint32_t staleFrames = elapsedTicks - 1;
+    skippedFrameCount_ += staleFrames;
+    const ModulationFrameStatus status =
+        modulationEngine_.skipFrames(staleFrames);
+    if (status == ModulationFrameStatus::kCompleted) {
+      completeAudioPlayback();
+      return;
+    }
   }
 
-  const uint64_t delayUs = nextSampleUs_ > nowUs
-                               ? static_cast<uint64_t>(nextSampleUs_ - nowUs)
-                               : 1;
-  const esp_err_t error = esp_timer_start_once(sampleTimer_, delayUs);
-  if (error != ESP_OK) applyDriverResult(error, "arm sample timer");
+  renderTimedSample();
+}
+
+void UltrasonicApp::completeAudioPlayback() {
+  stopSampleTimer();
+  modulationEngine_.stop();
+  if (!applyDriverResult(driver_.stop(), "finish audio")) return;
+
+  Serial.println("AUDIO DONE; output stopped");
+  reportTimingStats();
+  resetTimingStats();
+}
+
+bool UltrasonicApp::startSampleTimer(uint32_t sampleRateHz) {
+  if (sampleTimer_ == nullptr || sampleRateHz == 0 ||
+      sampleRateHz > kSampleTimerResolutionHz) {
+    applyDriverResult(ESP_ERR_INVALID_ARG, "configure sample timer");
+    return false;
+  }
+
+  stopSampleTimer();
+  clearPendingTimerTicks();
+
+  const uint64_t alarmTicks =
+      (static_cast<uint64_t>(kSampleTimerResolutionHz) + sampleRateHz / 2) /
+      sampleRateHz;
+  gptimer_alarm_config_t alarmConfig = {};
+  alarmConfig.alarm_count = alarmTicks;
+  alarmConfig.reload_count = 0;
+  alarmConfig.flags.auto_reload_on_alarm = true;
+
+  esp_err_t error = gptimer_set_raw_count(sampleTimer_, 0);
+  if (error == ESP_OK) {
+    error = gptimer_set_alarm_action(sampleTimer_, &alarmConfig);
+  }
+  if (error == ESP_OK) error = gptimer_start(sampleTimer_);
+  if (error != ESP_OK) {
+    applyDriverResult(error, "start sample timer");
+    return false;
+  }
+
+  sampleTimerRunning_ = true;
+  return true;
 }
 
 void UltrasonicApp::stopSampleTimer() {
   if (sampleTimer_ == nullptr) return;
-  const esp_err_t error = esp_timer_stop(sampleTimer_);
-  if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) {
+
+  esp_err_t error = ESP_OK;
+  if (sampleTimerRunning_) error = gptimer_stop(sampleTimer_);
+  sampleTimerRunning_ = false;
+  clearPendingTimerTicks();
+
+  if (error != ESP_OK) {
     Serial.printf("TIMER ERROR (stop): %s\r\n", esp_err_to_name(error));
   }
+}
+
+uint32_t UltrasonicApp::takePendingTimerTicks() {
+  portENTER_CRITICAL(&timerMux_);
+  const uint32_t result = pendingTimerTicks_;
+  pendingTimerTicks_ = 0;
+  portEXIT_CRITICAL(&timerMux_);
+  return result;
+}
+
+void UltrasonicApp::clearPendingTimerTicks() {
+  portENTER_CRITICAL(&timerMux_);
+  pendingTimerTicks_ = 0;
+  portEXIT_CRITICAL(&timerMux_);
+}
+
+void UltrasonicApp::resetTimingStats() {
+  skippedFrameCount_ = 0;
+  maximumTimerBacklog_ = 0;
+}
+
+void UltrasonicApp::reportTimingStats() const {
+  if (skippedFrameCount_ == 0) return;
+
+  Serial.printf(
+      "TIMING WARNING: skipped %llu stale samples; max backlog %lu ticks\r\n",
+      static_cast<unsigned long long>(skippedFrameCount_),
+      static_cast<unsigned long>(maximumTimerBacklog_));
 }
 
 bool UltrasonicApp::applyDriverResult(esp_err_t error,

@@ -18,7 +18,8 @@ esp_err_t UltrasonicDriver::begin() {
   timerConfig.duty_resolution = kResolution;
   timerConfig.timer_num = kTimer;
   timerConfig.freq_hz = kCarrierHz;
-  timerConfig.clk_cfg = LEDC_AUTO_CLK;
+  // 80 MHz APB / (40 kHz * 1024) = 500/256，可由 LEDC 精确分频。
+  timerConfig.clk_cfg = LEDC_USE_APB_CLK;
 
   esp_err_t error = ledc_timer_config(&timerConfig);
   if (error != ESP_OK) return error;
@@ -59,9 +60,23 @@ esp_err_t UltrasonicDriver::setChannelDuty(uint8_t channel, uint32_t duty) {
 }
 
 esp_err_t UltrasonicDriver::setAllDuty(uint32_t duty) {
+  if (!initialized_) return ESP_ERR_INVALID_STATE;
+  if (duty > kHalfDuty) duty = kHalfDuty;
+
+  const uint32_t hpoint = duty == 0 ? 0 : (kPeriodCounts - duty) / 2;
   esp_err_t firstError = ESP_OK;
+
+  // 先写入四路 shadow 参数，再集中触发更新，缩短通道之间的更新时间差。
   for (uint8_t channel = 0; channel < kChannelCount; ++channel) {
-    const esp_err_t error = setChannelDuty(channel, duty);
+    const esp_err_t error = ledc_set_duty_with_hpoint(
+        kSpeedMode, static_cast<ledc_channel_t>(channel), duty, hpoint);
+    if (firstError == ESP_OK && error != ESP_OK) firstError = error;
+  }
+  if (firstError != ESP_OK) return firstError;
+
+  for (uint8_t channel = 0; channel < kChannelCount; ++channel) {
+    const esp_err_t error = ledc_update_duty(
+        kSpeedMode, static_cast<ledc_channel_t>(channel));
     if (firstError == ESP_OK && error != ESP_OK) firstError = error;
   }
   return firstError;

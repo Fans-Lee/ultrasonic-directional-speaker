@@ -34,7 +34,7 @@ enum class ModulationFrameStatus : uint8_t {
 struct ModulationFrame {
   ModulationFrameStatus status = ModulationFrameStatus::kIdle;
   uint32_t duty = 0;
-  uint32_t intervalUs = 0;
+  uint32_t sampleRateHz = 0;
 };
 
 struct AudioInfo {

@@ -15,6 +15,7 @@ class AudioModulator final {
   bool start(AudioModulationMode modulationMode, bool loop);
   void stop();
   ModulationFrame nextFrame();
+  ModulationFrameStatus skipFrames(uint32_t frameCount);
   AudioInfo info() const;
 
  private:
