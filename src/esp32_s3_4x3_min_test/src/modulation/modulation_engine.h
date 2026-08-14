@@ -16,6 +16,7 @@ class ModulationEngine final {
   void setAudioModulationMode(AudioModulationMode mode);
   AudioModulationMode audioModulationMode() const;
   ModulationFrame nextFrame();
+  ModulationFrameStatus skipFrames(uint32_t frameCount);
   AudioInfo audioInfo() const;
 
  private:

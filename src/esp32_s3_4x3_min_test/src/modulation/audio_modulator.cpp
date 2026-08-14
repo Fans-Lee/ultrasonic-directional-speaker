@@ -65,7 +65,7 @@ ModulationFrame AudioModulator::nextFrame() {
       frame.duty = dsbAmModulator_.dutyForSample(sample);
       break;
   }
-  frame.intervalUs = 1000000UL / kAudioSampleRate;
+  frame.sampleRateHz = kAudioSampleRate;
 
   ++sampleIndex_;
   if (sampleIndex_ >= kAudioSampleCount) {
@@ -78,6 +78,27 @@ ModulationFrame AudioModulator::nextFrame() {
   }
 
   return frame;
+}
+
+ModulationFrameStatus AudioModulator::skipFrames(uint32_t frameCount) {
+  if (!running_) return ModulationFrameStatus::kIdle;
+  if (frameCount == 0) return ModulationFrameStatus::kRunning;
+
+  if (loop_) {
+    sampleIndex_ =
+        (sampleIndex_ + frameCount % kAudioSampleCount) % kAudioSampleCount;
+    return ModulationFrameStatus::kRunning;
+  }
+
+  const uint32_t remainingSamples = kAudioSampleCount - sampleIndex_;
+  if (frameCount >= remainingSamples) {
+    sampleIndex_ = kAudioSampleCount;
+    running_ = false;
+    return ModulationFrameStatus::kCompleted;
+  }
+
+  sampleIndex_ += frameCount;
+  return ModulationFrameStatus::kRunning;
 }
 
 AudioInfo AudioModulator::info() const {

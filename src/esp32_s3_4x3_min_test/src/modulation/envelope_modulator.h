@@ -12,6 +12,7 @@ class EnvelopeModulator final {
   bool begin(const DutyConfig& dutyConfig);
   void reset();
   ModulationFrame nextFrame();
+  ModulationFrameStatus skipFrames(uint32_t frameCount);
 
  private:
   static constexpr uint32_t kSampleRate = 8000;

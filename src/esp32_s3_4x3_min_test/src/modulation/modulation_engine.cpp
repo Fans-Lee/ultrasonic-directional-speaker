@@ -59,6 +59,24 @@ ModulationFrame ModulationEngine::nextFrame() {
   }
 }
 
+ModulationFrameStatus ModulationEngine::skipFrames(uint32_t frameCount) {
+  ModulationFrameStatus status = ModulationFrameStatus::kIdle;
+  switch (mode_) {
+    case Mode::kEnvelopeTone:
+      status = envelopeModulator_.skipFrames(frameCount);
+      break;
+    case Mode::kAudio:
+      status = audioModulator_.skipFrames(frameCount);
+      break;
+    case Mode::kOff:
+    default:
+      return status;
+  }
+
+  if (status == ModulationFrameStatus::kCompleted) mode_ = Mode::kOff;
+  return status;
+}
+
 AudioInfo ModulationEngine::audioInfo() const {
   return audioModulator_.info();
 }
