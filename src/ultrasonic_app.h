@@ -7,6 +7,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#include "modulation_engine.h"
 #include "ultrasonic_driver.h"
 
 namespace ultrasonic {
@@ -20,15 +21,6 @@ class UltrasonicApp final {
   esp_err_t begin();
 
  private:
-  enum class RunMode : uint8_t {
-    kOff,
-    kSingle,
-    kAllCarrier,
-    kEnvelopeTone,
-    kAudioOnce,
-    kAudioLoop,
-  };
-
   enum class CommandType : uint8_t {
     kStop,
     kSingle,
@@ -43,12 +35,6 @@ class UltrasonicApp final {
     uint8_t channel;
   };
 
-  static constexpr uint32_t kEnvelopeSampleRate = 8000;
-  static constexpr uint32_t kToneHz = 1000;
-  static constexpr uint8_t kEnvelopeSampleCount =
-      kEnvelopeSampleRate / kToneHz;
-  static constexpr float kAudioCarrierBase = 0.45f;
-  static constexpr float kAudioModulation = 0.40f;
   static constexpr uint32_t kTimerEvent = 1U << 0;
   static constexpr uint32_t kCommandEvent = 1U << 1;
 
@@ -72,25 +58,16 @@ class UltrasonicApp final {
   void renderTimedSample();
   void scheduleNextSample(uint32_t intervalUs);
   void stopSampleTimer();
-  uint8_t readAudioSample(uint32_t index) const;
   bool applyDriverResult(esp_err_t error, const char* operation);
 
-  void buildEnvelopeTable();
-  void buildAudioTables();
-
   UltrasonicDriver& driver_;
+  ModulationEngine modulationEngine_;
   QueueHandle_t commandQueue_ = nullptr;
   TaskHandle_t controlTaskHandle_ = nullptr;
   TaskHandle_t playbackTaskHandle_ = nullptr;
   esp_timer_handle_t sampleTimer_ = nullptr;
 
-  RunMode mode_ = RunMode::kOff;
-  uint8_t envelopeIndex_ = 0;
-  uint32_t audioIndex_ = 0;
   int64_t nextSampleUs_ = 0;
-  uint32_t envelopeDuty_[kEnvelopeSampleCount] = {};
-  uint32_t audioDutyLut_[256] = {};
-  uint8_t demoSineLut_[256] = {};
 };
 
 }  // namespace ultrasonic

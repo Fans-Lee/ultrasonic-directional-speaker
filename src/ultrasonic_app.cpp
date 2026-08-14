@@ -1,9 +1,5 @@
 #include "ultrasonic_app.h"
 
-#include <math.h>
-
-#include "audio_data.h"
-
 namespace ultrasonic {
 namespace {
 
@@ -16,8 +12,11 @@ constexpr UBaseType_t kPlaybackTaskPriority = 4;
 }  // namespace
 
 esp_err_t UltrasonicApp::begin() {
-  buildEnvelopeTable();
-  buildAudioTables();
+  const DutyConfig dutyConfig = {
+      UltrasonicDriver::kPeriodCounts,
+      UltrasonicDriver::kHalfDuty,
+  };
+  if (!modulationEngine_.begin(dutyConfig)) return ESP_ERR_INVALID_ARG;
 
   commandQueue_ = xQueueCreate(kCommandQueueLength, sizeof(Command));
   if (commandQueue_ == nullptr) return ESP_ERR_NO_MEM;
@@ -199,7 +198,7 @@ void UltrasonicApp::handleCommand(const Command& command) {
 
 void UltrasonicApp::startSingle(uint8_t channel) {
   stopSampleTimer();
-  mode_ = RunMode::kOff;
+  modulationEngine_.stop();
   if (!applyDriverResult(driver_.stop(), "clear channels")) return;
   if (!applyDriverResult(
           driver_.setChannelDuty(channel, UltrasonicDriver::kHalfDuty),
@@ -207,28 +206,30 @@ void UltrasonicApp::startSingle(uint8_t channel) {
     return;
   }
 
-  mode_ = RunMode::kSingle;
   Serial.printf("CH%d ON: GPIO%d, 40 kHz, 50%%\r\n",
                 static_cast<int>(channel + 1), driver_.gpioForChannel(channel));
 }
 
 void UltrasonicApp::startAllCarrier() {
   stopSampleTimer();
-  mode_ = RunMode::kOff;
+  modulationEngine_.stop();
   if (!applyDriverResult(
           driver_.setAllDuty(UltrasonicDriver::kHalfDuty),
           "enable all channels")) {
     return;
   }
 
-  mode_ = RunMode::kAllCarrier;
   Serial.println("ALL ON: four columns, same phase, 40 kHz, 50%");
 }
 
 void UltrasonicApp::startEnvelopeTone() {
   stopSampleTimer();
-  envelopeIndex_ = 0;
-  mode_ = RunMode::kEnvelopeTone;
+  if (!modulationEngine_.startEnvelopeTone()) {
+    Serial.println("MODULATION ERROR: envelope modulator is not ready");
+    stopOutput(false);
+    return;
+  }
+
   nextSampleUs_ = esp_timer_get_time();
   Serial.println(
       "TEST TONE: 40 kHz carrier with 1 kHz sine envelope on four columns");
@@ -238,27 +239,26 @@ void UltrasonicApp::startEnvelopeTone() {
 
 void UltrasonicApp::startAudio(bool loop) {
   stopSampleTimer();
-  if (kAudioSampleCount == 0 || kAudioSampleRate == 0) {
+  if (!modulationEngine_.startAudio(loop)) {
     Serial.println("AUDIO ERROR: audio_data.h contains no valid samples");
     stopOutput(false);
     return;
   }
 
-  audioIndex_ = 0;
-  mode_ = loop ? RunMode::kAudioLoop : RunMode::kAudioOnce;
+  const AudioInfo audio = modulationEngine_.audioInfo();
   nextSampleUs_ = esp_timer_get_time();
   Serial.printf("AUDIO %s: %lu samples at %lu Hz (%.2f s)\r\n",
                 loop ? "LOOP" : "PLAY ONCE",
-                static_cast<unsigned long>(kAudioSampleCount),
-                static_cast<unsigned long>(kAudioSampleRate),
-                static_cast<double>(kAudioSampleCount) /
-                    static_cast<double>(kAudioSampleRate));
+                static_cast<unsigned long>(audio.sampleCount),
+                static_cast<unsigned long>(audio.sampleRate),
+                static_cast<double>(audio.sampleCount) /
+                    static_cast<double>(audio.sampleRate));
   renderTimedSample();
 }
 
 void UltrasonicApp::stopOutput(bool printStatus) {
   stopSampleTimer();
-  mode_ = RunMode::kOff;
+  modulationEngine_.stop();
   applyDriverResult(driver_.stop(), "stop output");
   if (printStatus) {
     Serial.println(
@@ -267,40 +267,21 @@ void UltrasonicApp::stopOutput(bool printStatus) {
 }
 
 void UltrasonicApp::renderTimedSample() {
-  uint32_t intervalUs = 0;
+  const ModulationFrame frame = modulationEngine_.nextFrame();
+  if (frame.status == ModulationFrameStatus::kIdle) return;
 
-  if (mode_ == RunMode::kEnvelopeTone) {
-    if (!applyDriverResult(
-            driver_.setAllDuty(envelopeDuty_[envelopeIndex_]),
-            "write envelope sample")) {
-      return;
-    }
-    envelopeIndex_ = (envelopeIndex_ + 1) % kEnvelopeSampleCount;
-    intervalUs = 1000000UL / kEnvelopeSampleRate;
-  } else if (mode_ == RunMode::kAudioOnce || mode_ == RunMode::kAudioLoop) {
-    if (!applyDriverResult(
-            driver_.setAllDuty(audioDutyLut_[readAudioSample(audioIndex_)]),
-            "write audio sample")) {
-      return;
-    }
-
-    ++audioIndex_;
-    if (audioIndex_ >= kAudioSampleCount) {
-      if (mode_ == RunMode::kAudioLoop) {
-        audioIndex_ = 0;
-      } else {
-        mode_ = RunMode::kOff;
-        applyDriverResult(driver_.stop(), "finish audio");
-        Serial.println("AUDIO DONE; output stopped");
-        return;
-      }
-    }
-    intervalUs = 1000000UL / kAudioSampleRate;
-  } else {
+  if (!applyDriverResult(driver_.setAllDuty(frame.duty),
+                         "write modulation frame")) {
     return;
   }
 
-  scheduleNextSample(intervalUs);
+  if (frame.status == ModulationFrameStatus::kCompleted) {
+    applyDriverResult(driver_.stop(), "finish audio");
+    Serial.println("AUDIO DONE; output stopped");
+    return;
+  }
+
+  scheduleNextSample(frame.intervalUs);
 }
 
 void UltrasonicApp::scheduleNextSample(uint32_t intervalUs) {
@@ -332,79 +313,16 @@ void UltrasonicApp::stopSampleTimer() {
   }
 }
 
-uint8_t UltrasonicApp::readAudioSample(uint32_t index) const {
-  if (!kAudioIsDemo) return pgm_read_byte(&kAudioSamples[index]);
-
-  // audio_data.h 尚未由真实 WAV 覆盖时，生成 2 秒八音测试旋律。
-  static constexpr uint16_t kDemoNotesHz[] = {
-      500, 600, 700, 800, 700, 600, 500, 0,
-  };
-  static constexpr uint32_t kSamplesPerNote = kAudioSampleRate / 4;
-  static_assert(kSamplesPerNote > 0, "demo sample rate is too low");
-
-  const uint32_t noteIndex =
-      (index / kSamplesPerNote) %
-      (sizeof(kDemoNotesHz) / sizeof(kDemoNotesHz[0]));
-  const uint16_t frequency = kDemoNotesHz[noteIndex];
-  if (frequency == 0) return 128;
-
-  const uint32_t sampleInNote = index % kSamplesPerNote;
-  const uint8_t phase = static_cast<uint8_t>(
-      (sampleInNote * static_cast<uint32_t>(frequency) * 256UL) /
-      kAudioSampleRate);
-  return demoSineLut_[phase];
-}
-
 bool UltrasonicApp::applyDriverResult(esp_err_t error,
                                       const char* operation) {
   if (error == ESP_OK) return true;
 
   stopSampleTimer();
-  mode_ = RunMode::kOff;
+  modulationEngine_.stop();
   driver_.stop();
-  Serial.printf("HARDWARE ERROR (%s): %s\r\n", operation,
+  Serial.printf("RUNTIME ERROR (%s): %s\r\n", operation,
                 esp_err_to_name(error));
   return false;
-}
-
-void UltrasonicApp::buildEnvelopeTable() {
-  // 0.15..0.95 的正弦包络；反正弦映射补偿方波基波幅度。
-  for (uint8_t sample = 0; sample < kEnvelopeSampleCount; ++sample) {
-    const float phase = 2.0f * PI * static_cast<float>(sample) /
-                        static_cast<float>(kEnvelopeSampleCount);
-    const float envelope = 0.55f + 0.40f * sinf(phase);
-    const float dutyRatio = asinf(envelope) / PI;
-    uint32_t duty = static_cast<uint32_t>(lroundf(
-        dutyRatio * static_cast<float>(UltrasonicDriver::kPeriodCounts)));
-    if (duty < 1) duty = 1;
-    if (duty > UltrasonicDriver::kHalfDuty) {
-      duty = UltrasonicDriver::kHalfDuty;
-    }
-    envelopeDuty_[sample] = duty;
-  }
-}
-
-void UltrasonicApp::buildAudioTables() {
-  for (uint16_t sample = 0; sample < 256; ++sample) {
-    const float normalized =
-        (static_cast<float>(sample) - 128.0f) / 128.0f;
-    float envelope = kAudioCarrierBase + kAudioModulation * normalized;
-    if (envelope < 0.05f) envelope = 0.05f;
-    if (envelope > 0.90f) envelope = 0.90f;
-
-    const float dutyRatio = asinf(envelope) / PI;
-    uint32_t duty = static_cast<uint32_t>(lroundf(
-        dutyRatio * static_cast<float>(UltrasonicDriver::kPeriodCounts)));
-    if (duty < 1) duty = 1;
-    if (duty > UltrasonicDriver::kHalfDuty) {
-      duty = UltrasonicDriver::kHalfDuty;
-    }
-    audioDutyLut_[sample] = duty;
-
-    const float phase = 2.0f * PI * static_cast<float>(sample) / 256.0f;
-    demoSineLut_[sample] = static_cast<uint8_t>(
-        lroundf(128.0f + 90.0f * sinf(phase)));
-  }
 }
 
 }  // namespace ultrasonic
