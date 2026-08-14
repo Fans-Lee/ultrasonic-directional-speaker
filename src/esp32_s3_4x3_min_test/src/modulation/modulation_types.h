@@ -10,6 +10,21 @@ struct DutyConfig {
   uint32_t maximumDuty;
 };
 
+enum class AudioModulationMode : uint8_t {
+  kDsbAm,
+  kSram,
+};
+
+inline const char* audioModulationModeName(AudioModulationMode mode) {
+  switch (mode) {
+    case AudioModulationMode::kSram:
+      return "SRAM";
+    case AudioModulationMode::kDsbAm:
+    default:
+      return "DSB-AM";
+  }
+}
+
 enum class ModulationFrameStatus : uint8_t {
   kIdle,
   kRunning,

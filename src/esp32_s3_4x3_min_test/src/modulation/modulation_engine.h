@@ -13,6 +13,8 @@ class ModulationEngine final {
   void stop();
   bool startEnvelopeTone();
   bool startAudio(bool loop);
+  void setAudioModulationMode(AudioModulationMode mode);
+  AudioModulationMode audioModulationMode() const;
   ModulationFrame nextFrame();
   AudioInfo audioInfo() const;
 
@@ -26,6 +28,7 @@ class ModulationEngine final {
   EnvelopeModulator envelopeModulator_;
   AudioModulator audioModulator_;
   Mode mode_ = Mode::kOff;
+  AudioModulationMode audioModulationMode_ = AudioModulationMode::kDsbAm;
   bool initialized_ = false;
 };
 

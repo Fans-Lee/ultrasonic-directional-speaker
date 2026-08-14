@@ -7,8 +7,8 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#include "modulation_engine.h"
-#include "ultrasonic_driver.h"
+#include "../driver/ultrasonic_driver.h"
+#include "../modulation/modulation_engine.h"
 
 namespace ultrasonic {
 
@@ -26,6 +26,8 @@ class UltrasonicApp final {
     kSingle,
     kAllCarrier,
     kEnvelopeTone,
+    kUseDsbAm,
+    kUseSram,
     kAudioOnce,
     kAudioLoop,
   };
@@ -52,6 +54,7 @@ class UltrasonicApp final {
   void startSingle(uint8_t channel);
   void startAllCarrier();
   void startEnvelopeTone();
+  void selectAudioModulation(AudioModulationMode mode);
   void startAudio(bool loop);
   void stopOutput(bool printStatus = true);
 

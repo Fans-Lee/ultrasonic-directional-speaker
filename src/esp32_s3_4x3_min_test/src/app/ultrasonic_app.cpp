@@ -125,6 +125,12 @@ void UltrasonicApp::handleSerial() {
       case 'T':
         enqueue(CommandType::kEnvelopeTone);
         break;
+      case 'D':
+        enqueue(CommandType::kUseDsbAm);
+        break;
+      case 'S':
+        enqueue(CommandType::kUseSram);
+        break;
       case 'P':
         enqueue(CommandType::kAudioOnce);
         break;
@@ -155,6 +161,8 @@ void UltrasonicApp::printHelp() const {
   Serial.println("1..4 : enable only one column (left to right)");
   Serial.println("A : enable all four columns, same phase, 40 kHz");
   Serial.println("T : 1 kHz envelope test on all four columns");
+  Serial.println("D : select DSB-AM for the next audio playback (default)");
+  Serial.println("S : select square-root AM (SRAM) for the next playback");
   Serial.println("P : play embedded audio once");
   Serial.println("L : loop embedded audio");
   Serial.println("H : print this help");
@@ -186,6 +194,12 @@ void UltrasonicApp::handleCommand(const Command& command) {
       break;
     case CommandType::kEnvelopeTone:
       startEnvelopeTone();
+      break;
+    case CommandType::kUseDsbAm:
+      selectAudioModulation(AudioModulationMode::kDsbAm);
+      break;
+    case CommandType::kUseSram:
+      selectAudioModulation(AudioModulationMode::kSram);
       break;
     case CommandType::kAudioOnce:
       startAudio(false);
@@ -237,17 +251,26 @@ void UltrasonicApp::startEnvelopeTone() {
   renderTimedSample();
 }
 
+void UltrasonicApp::selectAudioModulation(AudioModulationMode mode) {
+  modulationEngine_.setAudioModulationMode(mode);
+  Serial.printf("AUDIO MODULATION: %s (applies on next P/L command)\r\n",
+                audioModulationModeName(mode));
+}
+
 void UltrasonicApp::startAudio(bool loop) {
   stopSampleTimer();
   if (!modulationEngine_.startAudio(loop)) {
-    Serial.println("AUDIO ERROR: audio_data.h contains no valid samples");
+    Serial.println("AUDIO ERROR: src/data/audio_data.h contains no valid samples");
     stopOutput(false);
     return;
   }
 
   const AudioInfo audio = modulationEngine_.audioInfo();
+  const char* modulationName = audioModulationModeName(
+      modulationEngine_.audioModulationMode());
   nextSampleUs_ = esp_timer_get_time();
-  Serial.printf("AUDIO %s: %lu samples at %lu Hz (%.2f s)\r\n",
+  Serial.printf("AUDIO %s %s: %lu samples at %lu Hz (%.2f s)\r\n",
+                modulationName,
                 loop ? "LOOP" : "PLAY ONCE",
                 static_cast<unsigned long>(audio.sampleCount),
                 static_cast<unsigned long>(audio.sampleRate),

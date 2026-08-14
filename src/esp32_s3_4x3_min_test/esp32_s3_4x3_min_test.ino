@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
-#include "ultrasonic_app.h"
-#include "ultrasonic_driver.h"
+#include "src/app/ultrasonic_app.h"
+#include "src/driver/ultrasonic_driver.h"
 
 namespace {
 

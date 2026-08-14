@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 
+#include "dsb_am_modulator.h"
 #include "modulation_types.h"
+#include "sram_modulator.h"
 
 namespace ultrasonic {
 
@@ -10,7 +12,7 @@ namespace ultrasonic {
 class AudioModulator final {
  public:
   bool begin(const DutyConfig& dutyConfig);
-  bool start(bool loop);
+  bool start(AudioModulationMode modulationMode, bool loop);
   void stop();
   ModulationFrame nextFrame();
   AudioInfo info() const;
@@ -18,9 +20,11 @@ class AudioModulator final {
  private:
   uint8_t readSample(uint32_t index) const;
 
-  uint32_t dutyLut_[256] = {};
+  DsbAmModulator dsbAmModulator_;
+  SramModulator sramModulator_;
   uint8_t demoSineLut_[256] = {};
   uint32_t sampleIndex_ = 0;
+  AudioModulationMode modulationMode_ = AudioModulationMode::kDsbAm;
   bool loop_ = false;
   bool initialized_ = false;
   bool running_ = false;

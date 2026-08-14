@@ -25,10 +25,21 @@ bool ModulationEngine::startEnvelopeTone() {
 }
 
 bool ModulationEngine::startAudio(bool loop) {
-  if (!initialized_ || !audioModulator_.start(loop)) return false;
+  if (!initialized_ ||
+      !audioModulator_.start(audioModulationMode_, loop)) {
+    return false;
+  }
 
   mode_ = Mode::kAudio;
   return true;
+}
+
+void ModulationEngine::setAudioModulationMode(AudioModulationMode mode) {
+  audioModulationMode_ = mode;
+}
+
+AudioModulationMode ModulationEngine::audioModulationMode() const {
+  return audioModulationMode_;
 }
 
 ModulationFrame ModulationEngine::nextFrame() {

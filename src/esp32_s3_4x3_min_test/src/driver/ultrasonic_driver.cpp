@@ -42,11 +42,11 @@ esp_err_t UltrasonicDriver::begin() {
   return stop();
 }
 
-esp_err_t UltrasonicDriver::setChannelDuty(uint8_t channel, uint32_t duty) {//该方法会设置指定通道占空比，并尽量保证载波居中，注意：该方法不负责从包络的幅度转换到占空比，调用者需要自行计算。
+// 设置指定通道的占空比并保持载波居中；包络到占空比的转换由调制层负责。
+esp_err_t UltrasonicDriver::setChannelDuty(uint8_t channel, uint32_t duty) {
   if (!initialized_) return ESP_ERR_INVALID_STATE;
   if (channel >= kChannelCount) return ESP_ERR_INVALID_ARG;
   if (duty > kHalfDuty) duty = kHalfDuty;
-  if (duty < 0) duty = 0;
 
   // 让脉冲以计数周期中点为中心，改变占空比时尽量保持载波相位不动。
   const uint32_t hpoint = duty == 0 ? 0 : (kPeriodCounts - duty) / 2;

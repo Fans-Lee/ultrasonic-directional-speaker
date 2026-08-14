@@ -1,5 +1,20 @@
 # ESP32-S3 + 12 只 TCT40-16T：4×3 最小测试版
 
+## 固件目录结构
+
+```text
+esp32_s3_4x3_min_test/
+├─ esp32_s3_4x3_min_test.ino   Arduino 启动入口
+├─ README.md                    接线、烧录和测试说明
+└─ src/                         Arduino 自动递归编译目录
+   ├─ app/                      串口、队列和 FreeRTOS 调度
+   ├─ driver/                   GPIO 与 LEDC 硬件驱动
+   ├─ modulation/               包络、DSB-AM、SRAM 和音频调制
+   └─ data/                     固件内置音频数据
+```
+
+主 `.ino` 只负责启动；业务源码放在内层 `src`，以符合 Arduino sketch 对递归编译目录的约定。
+
 ## 1. 分组结论
 
 把洞洞板的长边横放，形成 4 列、3 行：
@@ -142,6 +157,8 @@ Arduino IDE 选择：
 | `1`～`4` | 只开启对应的一列，40 kHz、50% 占空 |
 | `A` | 四列同相开启，40 kHz、50% 占空 |
 | `T` | 四列同相，运行 1 kHz 正弦包络测试 |
+| `D` | 选择 DSB-AM 音频调制（上电默认） |
+| `S` | 选择平方根幅度调制 SRAM |
 | `P` | 播放固件中的音频一次，播完自动停止 |
 | `L` | 循环播放固件中的音频 |
 | `H` | 显示帮助 |
@@ -150,27 +167,28 @@ Arduino IDE 选择：
 
 ### 6.1 直接试播内置旋律
 
-当前 `audio_data.h` 配置了一个由固件生成的约2秒八音测试旋律。烧录后：
+当前 `src/data/audio_data.h` 配置了一个由固件生成的约2秒八音测试旋律。烧录后：
 
 1. 先用 `1`～`4` 和 `T` 确认四路硬件正常；
-2. 输入 `P`，播放测试旋律一次；
-3. 输入 `L`，循环播放；
-4. 随时输入 `0` 停止。
+2. 输入 `D` 或 `S` 选择 DSB-AM/SRAM；
+3. 输入 `P`，播放测试旋律一次；
+4. 输入 `L`，循环播放；
+5. 随时输入 `0` 停止。
 
-`A`只发连续40 kHz，人耳通常听不到。`P/L`才会把音频变成40 kHz载波的幅度包络。
+`A`只发连续40 kHz，人耳通常听不到。`P/L`会使用最近由`D/S`选择的方式，把音频变成40 kHz载波的幅度包络。切换调制方式不会中断当前播放，而会在下一次`P/L`命令时生效。
 
 ### 6.2 换成自己的WAV音频
 
 准备一段尽量短、语音清晰、没有强低音的未压缩PCM WAV。建议先用2～5秒语音，不要一开始放音乐。在本目录打开PowerShell并运行：
 
 ```powershell
-python .\wav_to_audio_header.py .\我的音频.wav .\audio_data.h
+python ..\..\utils\wav_to_audio_header.py .\我的音频.wav .\src\data\audio_data.h
 ```
 
 如果电脑使用 `py` 启动Python：
 
 ```powershell
-py .\wav_to_audio_header.py .\我的音频.wav .\audio_data.h
+py ..\..\utils\wav_to_audio_header.py .\我的音频.wav .\src\data\audio_data.h
 ```
 
 转换器会自动合并为单声道、重采样为8 kHz、转成8位无符号PCM、去除直流、归一化音量并增加短淡入淡出。转换器只接受未压缩PCM WAV，最长30秒；MP3、AAC需要先用音频软件导出为WAV。
@@ -185,6 +203,16 @@ py .\wav_to_audio_header.py .\我的音频.wav .\audio_data.h
 8 kHz音频样本 → 正包络 → 改变40 kHz方波基波幅度
 → 四列TC4428差分驱动 → 超声阵列 → 空气非线性自解调
 ```
+
+当前固件使用 `b=0.45`、`d=0.40`，归一化音频为 `s∈[-1,1]`：
+
+```text
+DSB-AM: E = b + d*s
+SRAM:   E = sqrt((b+d) * (b+d*s))
+PWM:    duty_ratio = asin(E) / pi
+```
+
+SRAM 公式是 `sqrt(1+m*s)` 的等比例形式，并缩放到与 DSB-AM 相同的峰值包络 `b+d`。两种方式的实际可听声压仍可能不同，正式比较失真时需要用麦克风实测并校准声压，不能只按数字占空比判断。
 
 12只阵元、约24 Vpp且无谐振升压时，正确调制也可能只能听到很弱或失真的声音。是否听得到不能单独作为电路是否工作的判据。不要把耳朵贴近阵列；测试时让阵面朝向无人区域，先播放5～10秒并检查驱动器和输出电阻温升。
 
