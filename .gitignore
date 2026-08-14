@@ -3,7 +3,9 @@
 *.inspect.ndjson
 *.pyc
 **/__pycache__/
+.venv/
 work/
+data/
 ppt_build_kaoti/
 超声定向音响-开题交流报告/
 
@@ -12,3 +14,5 @@ ppt_build_kaoti/
 Thumbs.db
 *.swp
 *.tmp
+
+*.wav
