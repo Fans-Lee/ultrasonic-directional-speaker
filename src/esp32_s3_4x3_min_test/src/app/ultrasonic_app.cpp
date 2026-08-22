@@ -8,6 +8,8 @@ constexpr uint32_t kControlTaskStackBytes = 4096;
 constexpr uint32_t kPlaybackTaskStackBytes = 4096;
 constexpr UBaseType_t kControlTaskPriority = 2;
 constexpr UBaseType_t kPlaybackTaskPriority = 8;
+constexpr int32_t kCarrierStepHz = 100;
+constexpr uint32_t kDefaultToneHz = 1000;
 
 }  // namespace
 
@@ -137,8 +139,8 @@ void UltrasonicApp::playbackTask() {
       }
     }
 
-    // D/S 只改变下次播放方式，不重置当前节拍；其余命令会重置定时器，
-    // 因而必须丢弃与这些命令同时到达的旧节拍。
+    // 返回 false 的模式/频率选择命令不重置当前调制节拍；
+    // 启停输出的命令会重置定时器，必须丢弃同时到达的旧节拍。
     if ((events & kTimerEvent) != 0 && !timingReconfigured) {
       processTimerTicks();
     }
@@ -150,26 +152,67 @@ void UltrasonicApp::handleSerial() {
     char input = static_cast<char>(Serial.read());
     if (input >= 'a' && input <= 'z') input -= ('a' - 'A');
 
-    if (input >= '1' && input <= '4') {
-      enqueue(CommandType::kSingle, static_cast<uint8_t>(input - '1'));
+    if (input >= '0' && input <= '9') {
+      numericInputActive_ = true;
+      const uint32_t digit = static_cast<uint32_t>(input - '0');
+      if (numericInputValue_ > (UINT32_MAX - digit) / 10) {
+        numericInputOverflow_ = true;
+      } else if (!numericInputOverflow_) {
+        numericInputValue_ = numericInputValue_ * 10 + digit;
+      }
       continue;
     }
 
+    if (input == '\r' || input == '\n' || input == ' ') {
+      if (numericInputActive_) handleNumericInput();
+      continue;
+    }
+
+    if (numericInputActive_) {
+      Serial.println("NUMBER ERROR: terminate the frequency with Enter");
+      numericInputValue_ = 0;
+      numericInputActive_ = false;
+      numericInputOverflow_ = false;
+    }
+
     switch (input) {
-      case '0':
-        enqueue(CommandType::kStop);
-        break;
       case 'A':
         enqueue(CommandType::kAllCarrier);
         break;
       case 'T':
-        enqueue(CommandType::kEnvelopeTone);
+        enqueue(CommandType::kEnvelopeTone, kDefaultToneHz);
         break;
       case 'D':
         enqueue(CommandType::kUseDsbAm);
         break;
       case 'S':
         enqueue(CommandType::kUseSram);
+        break;
+      case 'R':
+        enqueue(CommandType::kUseRawAudio);
+        break;
+      case 'E':
+        enqueue(CommandType::kUseEnhancedAudio);
+        break;
+      case 'N':
+        enqueue(CommandType::kUseStandardDrive);
+        break;
+      case 'B':
+        enqueue(CommandType::kUseBoostDrive);
+        break;
+      case '-':
+      case '[':
+        enqueue(CommandType::kCarrierDown);
+        break;
+      case '+':
+      case ']':
+        enqueue(CommandType::kCarrierUp);
+        break;
+      case 'C':
+        enqueue(CommandType::kCarrierReset);
+        break;
+      case 'F':
+        enqueue(CommandType::kCarrierReport);
         break;
       case 'P':
         enqueue(CommandType::kAudioOnce);
@@ -181,10 +224,6 @@ void UltrasonicApp::handleSerial() {
       case '?':
         printHelp();
         break;
-      case '\r':
-      case '\n':
-      case ' ':
-        break;
       default:
         Serial.printf("Unknown command: 0x%02X. Send H for help.\r\n",
                       static_cast<unsigned int>(
@@ -194,15 +233,54 @@ void UltrasonicApp::handleSerial() {
   }
 }
 
+void UltrasonicApp::handleNumericInput() {
+  const uint32_t value = numericInputValue_;
+  const bool overflow = numericInputOverflow_;
+  numericInputValue_ = 0;
+  numericInputActive_ = false;
+  numericInputOverflow_ = false;
+
+  if (overflow) {
+    Serial.println("NUMBER ERROR: value is too large");
+    return;
+  }
+  if (value == 0) {
+    enqueue(CommandType::kStop);
+    return;
+  }
+  if (value >= 1 && value <= UltrasonicDriver::kChannelCount) {
+    enqueue(CommandType::kSingle, value - 1);
+    return;
+  }
+  if (value < EnvelopeModulator::kMinimumToneHz ||
+      value > EnvelopeModulator::kMaximumToneHz) {
+    Serial.printf("TONE ERROR: enter %lu..%lu Hz, then press Enter\r\n",
+                  static_cast<unsigned long>(
+                      EnvelopeModulator::kMinimumToneHz),
+                  static_cast<unsigned long>(
+                      EnvelopeModulator::kMaximumToneHz));
+    return;
+  }
+
+  enqueue(CommandType::kEnvelopeTone, value);
+}
+
 void UltrasonicApp::printHelp() const {
   Serial.println();
   Serial.println("=== ESP32-S3 4x3 ultrasonic array smoke test ===");
-  Serial.println("0 : stop all PWM");
-  Serial.println("1..4 : enable only one column (left to right)");
+  Serial.println("0 + Enter : stop all PWM");
+  Serial.println("1..4 + Enter : enable only one column (left to right)");
   Serial.println("A : enable all four columns, same phase, 40 kHz");
   Serial.println("T : 1 kHz envelope test on all four columns");
+  Serial.println("20..3000 + Enter : play that audible sine frequency in Hz");
   Serial.println("D : select DSB-AM for the next audio playback (default)");
   Serial.println("S : select square-root AM (SRAM) for the next playback");
+  Serial.println("E : enhanced audio level for next playback (default)");
+  Serial.println("R : raw PCM level for the next playback (A/B reference)");
+  Serial.println("B : boosted envelope depth for the next tone/audio (default)");
+  Serial.println("N : standard envelope depth for the next tone/audio");
+  Serial.println("-/[ and +/] : tune carrier down/up by 100 Hz");
+  Serial.println("C : reset carrier to 40 kHz; F : report actual carrier");
   Serial.println("P : play embedded audio once");
   Serial.println("L : loop embedded audio");
   Serial.println("H : print this help");
@@ -210,8 +288,8 @@ void UltrasonicApp::printHelp() const {
   Serial.println();
 }
 
-bool UltrasonicApp::enqueue(CommandType type, uint8_t channel) {
-  const Command command = {type, channel};
+bool UltrasonicApp::enqueue(CommandType type, uint32_t value) {
+  const Command command = {type, value};
   if (xQueueSend(commandQueue_, &command, pdMS_TO_TICKS(20)) != pdTRUE) {
     Serial.println("COMMAND ERROR: queue is full");
     return false;
@@ -227,19 +305,43 @@ bool UltrasonicApp::handleCommand(const Command& command) {
       stopOutput();
       return true;
     case CommandType::kSingle:
-      startSingle(command.channel);
+      startSingle(static_cast<uint8_t>(command.value));
       return true;
     case CommandType::kAllCarrier:
       startAllCarrier();
       return true;
     case CommandType::kEnvelopeTone:
-      startEnvelopeTone();
+      startEnvelopeTone(command.value);
       return true;
     case CommandType::kUseDsbAm:
       selectAudioModulation(AudioModulationMode::kDsbAm);
       return false;
     case CommandType::kUseSram:
       selectAudioModulation(AudioModulationMode::kSram);
+      return false;
+    case CommandType::kUseRawAudio:
+      selectAudioProcessing(AudioProcessingMode::kRaw);
+      return false;
+    case CommandType::kUseEnhancedAudio:
+      selectAudioProcessing(AudioProcessingMode::kLoudnessEnhanced);
+      return false;
+    case CommandType::kUseStandardDrive:
+      selectAudioDrive(AudioDriveMode::kStandard);
+      return false;
+    case CommandType::kUseBoostDrive:
+      selectAudioDrive(AudioDriveMode::kBoost);
+      return false;
+    case CommandType::kCarrierDown:
+      adjustCarrier(-kCarrierStepHz);
+      return false;
+    case CommandType::kCarrierUp:
+      adjustCarrier(kCarrierStepHz);
+      return false;
+    case CommandType::kCarrierReset:
+      resetCarrier();
+      return false;
+    case CommandType::kCarrierReport:
+      reportCarrier();
       return false;
     case CommandType::kAudioOnce:
       startAudio(false);
@@ -264,8 +366,9 @@ void UltrasonicApp::startSingle(uint8_t channel) {
     return;
   }
 
-  Serial.printf("CH%d ON: GPIO%d, 40 kHz, 50%%\r\n",
-                static_cast<int>(channel + 1), driver_.gpioForChannel(channel));
+  Serial.printf("CH%d ON: GPIO%d, %lu Hz, 50%%\r\n",
+                static_cast<int>(channel + 1), driver_.gpioForChannel(channel),
+                static_cast<unsigned long>(driver_.carrierHz()));
 }
 
 void UltrasonicApp::startAllCarrier() {
@@ -279,21 +382,25 @@ void UltrasonicApp::startAllCarrier() {
     return;
   }
 
-  Serial.println("ALL ON: four columns, same phase, 40 kHz, 50%");
+  Serial.printf("ALL ON: four columns, same phase, %lu Hz, 50%%\r\n",
+                static_cast<unsigned long>(driver_.carrierHz()));
 }
 
-void UltrasonicApp::startEnvelopeTone() {
+void UltrasonicApp::startEnvelopeTone(uint32_t toneHz) {
   stopSampleTimer();
   reportTimingStats();
   resetTimingStats();
-  if (!modulationEngine_.startEnvelopeTone()) {
+  if (!modulationEngine_.startEnvelopeTone(toneHz)) {
     Serial.println("MODULATION ERROR: envelope modulator is not ready");
     stopOutput(false);
     return;
   }
 
-  Serial.println(
-      "TEST TONE: 40 kHz carrier with 1 kHz sine envelope on four columns");
+  Serial.printf(
+      "TEST TONE: %lu Hz sine, %lu Hz carrier, %s drive, four columns\r\n",
+      static_cast<unsigned long>(toneHz),
+      static_cast<unsigned long>(driver_.carrierHz()),
+      audioDriveModeName(modulationEngine_.audioDriveMode()));
   Serial.println("This is only a bench test; the audible tone may be weak.");
   renderTimedSample();
 }
@@ -302,6 +409,49 @@ void UltrasonicApp::selectAudioModulation(AudioModulationMode mode) {
   modulationEngine_.setAudioModulationMode(mode);
   Serial.printf("AUDIO MODULATION: %s (applies on next P/L command)\r\n",
                 audioModulationModeName(mode));
+}
+
+void UltrasonicApp::selectAudioProcessing(AudioProcessingMode mode) {
+  modulationEngine_.setAudioProcessingMode(mode);
+  Serial.printf("AUDIO LEVEL: %s (applies on next P/L command)\r\n",
+                audioProcessingModeName(mode));
+}
+
+void UltrasonicApp::selectAudioDrive(AudioDriveMode mode) {
+  modulationEngine_.setAudioDriveMode(mode);
+  Serial.printf("DRIVE: %s (applies on next tone or P/L command)\r\n",
+                audioDriveModeName(mode));
+}
+
+void UltrasonicApp::adjustCarrier(int32_t deltaHz) {
+  int32_t target = static_cast<int32_t>(driver_.carrierHz()) + deltaHz;
+  if (target < static_cast<int32_t>(UltrasonicDriver::kMinimumCarrierHz)) {
+    target = UltrasonicDriver::kMinimumCarrierHz;
+  }
+  if (target > static_cast<int32_t>(UltrasonicDriver::kMaximumCarrierHz)) {
+    target = UltrasonicDriver::kMaximumCarrierHz;
+  }
+
+  if (!applyDriverResult(
+          driver_.setCarrierFrequency(static_cast<uint32_t>(target)),
+          "tune carrier")) {
+    return;
+  }
+  reportCarrier();
+}
+
+void UltrasonicApp::resetCarrier() {
+  if (!applyDriverResult(
+          driver_.setCarrierFrequency(UltrasonicDriver::kDefaultCarrierHz),
+          "reset carrier")) {
+    return;
+  }
+  reportCarrier();
+}
+
+void UltrasonicApp::reportCarrier() const {
+  Serial.printf("CARRIER: %lu Hz (range 38000..42000, step 100)\r\n",
+                static_cast<unsigned long>(driver_.carrierHz()));
 }
 
 void UltrasonicApp::startAudio(bool loop) {
@@ -317,13 +467,20 @@ void UltrasonicApp::startAudio(bool loop) {
   const AudioInfo audio = modulationEngine_.audioInfo();
   const char* modulationName = audioModulationModeName(
       modulationEngine_.audioModulationMode());
-  Serial.printf("AUDIO %s %s: %lu samples at %lu Hz (%.2f s)\r\n",
+  const char* processingName = audioProcessingModeName(
+      modulationEngine_.audioProcessingMode());
+  const char* driveName = audioDriveModeName(
+      modulationEngine_.audioDriveMode());
+  Serial.printf("AUDIO %s %s %s %s: %lu samples at %lu Hz (%.2f s), carrier %lu Hz\r\n",
                 modulationName,
+                processingName,
+                driveName,
                 loop ? "LOOP" : "PLAY ONCE",
                 static_cast<unsigned long>(audio.sampleCount),
                 static_cast<unsigned long>(audio.sampleRate),
                 static_cast<double>(audio.sampleCount) /
-                    static_cast<double>(audio.sampleRate));
+                    static_cast<double>(audio.sampleRate),
+                static_cast<unsigned long>(driver_.carrierHz()));
   renderTimedSample();
 }
 
