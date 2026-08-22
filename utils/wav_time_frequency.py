@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Analyze a PCM WAV file and export its time-frequency-intensity relation.
+"""Analyze PCM WAV files and export their time-frequency-intensity relations.
 
 The script uses a Hann-window short-time Fourier transform (STFT) and creates:
 
@@ -9,6 +9,9 @@ The script uses a Hann-window short-time Fourier transform (STFT) and creates:
 Examples (run from the project root):
 
     .venv/Scripts/python.exe utils/wav_time_frequency.py input.wav
+    .venv/Scripts/python.exe utils/wav_time_frequency.py first.wav second.wav
+    .venv/Scripts/python.exe utils/wav_time_frequency.py data/ --recursive \
+        --output-dir analysis/
     .venv/Scripts/python.exe utils/wav_time_frequency.py input.wav \
         --output-prefix analysis/input --max-frequency 8000
 
@@ -25,6 +28,7 @@ import pathlib
 import sys
 import wave
 from dataclasses import dataclass
+from typing import Optional
 
 import matplotlib
 
@@ -266,13 +270,30 @@ def write_plot(
 
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate PNG and CSV time-frequency-intensity data from a PCM WAV."
+        description=(
+            "Generate PNG and CSV time-frequency-intensity data from PCM WAV files."
+        )
     )
-    parser.add_argument("input_wav", type=pathlib.Path, help="input PCM WAV file")
+    parser.add_argument(
+        "input_wav",
+        nargs="+",
+        type=pathlib.Path,
+        help="one or more input PCM WAV files or directories",
+    )
     parser.add_argument(
         "--output-prefix",
         type=pathlib.Path,
-        help="output path without extension (default: beside input WAV)",
+        help="output path without extension (single input file only)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=pathlib.Path,
+        help="directory for all output files (default: beside each input WAV)",
+    )
+    parser.add_argument(
+        "--recursive",
+        action="store_true",
+        help="recursively find WAV files in input directories",
     )
     parser.add_argument(
         "--window-ms",
@@ -310,17 +331,102 @@ def build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run(args: argparse.Namespace) -> tuple[pathlib.Path, pathlib.Path | None, WavData, Spectrogram]:
-    input_path = args.input_wav.expanduser().resolve()
+AnalysisResult = tuple[pathlib.Path, Optional[pathlib.Path], WavData, Spectrogram]
+
+
+def collect_input_wavs(
+    input_paths: list[pathlib.Path], recursive: bool
+) -> list[pathlib.Path]:
+    """Resolve files and expand directories into a stable, de-duplicated WAV list."""
+    wav_paths: list[pathlib.Path] = []
+    seen: set[pathlib.Path] = set()
+
+    for supplied_path in input_paths:
+        path = supplied_path.expanduser().resolve()
+        if path.is_file():
+            candidates = [path]
+        elif path.is_dir():
+            iterator = path.rglob("*") if recursive else path.iterdir()
+            candidates = sorted(
+                (
+                    candidate.resolve()
+                    for candidate in iterator
+                    if candidate.is_file() and candidate.suffix.lower() == ".wav"
+                ),
+                key=lambda candidate: str(candidate).lower(),
+            )
+            if not candidates:
+                scope = "recursively " if recursive else ""
+                raise ValueError(f"no WAV files found {scope}in directory: {path}")
+        else:
+            raise ValueError(f"input WAV or directory does not exist: {path}")
+
+        for candidate in candidates:
+            if candidate not in seen:
+                seen.add(candidate)
+                wav_paths.append(candidate)
+
+    return wav_paths
+
+
+def build_output_prefixes(
+    input_paths: list[pathlib.Path], args: argparse.Namespace
+) -> list[pathlib.Path]:
+    """Choose one output prefix per input and reject ambiguous overwrites."""
+    if args.output_prefix is not None and args.output_dir is not None:
+        raise ValueError("--output-prefix and --output-dir cannot be used together")
+    if args.output_prefix is not None:
+        if len(input_paths) != 1:
+            raise ValueError("--output-prefix can only be used with one input WAV")
+        return [args.output_prefix.expanduser().resolve()]
+
+    output_dir = (
+        args.output_dir.expanduser().resolve()
+        if args.output_dir is not None
+        else None
+    )
+    prefixes = [
+        (output_dir if output_dir is not None else path.parent)
+        / f"{path.stem}_time_frequency"
+        for path in input_paths
+    ]
+    if len(set(prefixes)) != len(prefixes):
+        raise ValueError(
+            "multiple inputs would produce the same name in --output-dir; "
+            "rename the files or process them separately"
+        )
+    return prefixes
+
+
+def run(
+    args: argparse.Namespace,
+    input_path: pathlib.Path | None = None,
+    output_prefix: pathlib.Path | None = None,
+) -> AnalysisResult:
+    """Analyze one WAV file.
+
+    ``input_path`` and ``output_prefix`` are supplied by batch mode. Omitting
+    them keeps programmatic use with the former single-file Namespace working.
+    """
+    if input_path is None:
+        supplied_input = args.input_wav
+        if isinstance(supplied_input, list):
+            if len(supplied_input) != 1:
+                raise ValueError("run() analyzes one file at a time")
+            supplied_input = supplied_input[0]
+        input_path = supplied_input.expanduser().resolve()
+    else:
+        input_path = input_path.expanduser().resolve()
+
     if not input_path.is_file():
         raise ValueError(f"input WAV does not exist: {input_path}")
 
-    default_prefix = input_path.with_name(f"{input_path.stem}_time_frequency")
-    output_prefix = (
-        args.output_prefix.expanduser().resolve()
-        if args.output_prefix is not None
-        else default_prefix
-    )
+    if output_prefix is None:
+        output_prefix = (
+            args.output_prefix.expanduser().resolve()
+            if args.output_prefix is not None
+            else input_path.with_name(f"{input_path.stem}_time_frequency")
+        )
     output_prefix.parent.mkdir(parents=True, exist_ok=True)
 
     wav_data = read_pcm_wav(input_path)
@@ -345,16 +451,17 @@ def run(args: argparse.Namespace) -> tuple[pathlib.Path, pathlib.Path | None, Wa
     return png_path, csv_path, wav_data, spectrogram
 
 
-def main() -> int:
-    parser = build_argument_parser()
-    args = parser.parse_args()
-    try:
-        png_path, csv_path, wav_data, spectrogram = run(args)
-    except (OSError, ValueError) as error:
-        parser.exit(2, f"error: {error}\n")
-
+def print_result(
+    input_path: pathlib.Path,
+    result: AnalysisResult,
+    item_number: int,
+    item_count: int,
+) -> None:
+    png_path, csv_path, wav_data, spectrogram = result
     duration = wav_data.samples.size / wav_data.sample_rate
     frequency_resolution = wav_data.sample_rate / spectrogram.fft_length
+    if item_count > 1:
+        print(f"[{item_number}/{item_count}] {input_path}")
     print(
         f"Analyzed {duration:.3f} s, {wav_data.sample_rate} Hz, "
         f"{wav_data.channels} channel(s), {wav_data.sample_width * 8}-bit PCM"
@@ -367,7 +474,39 @@ def main() -> int:
     print(f"PNG: {png_path}")
     if csv_path is not None:
         print(f"CSV: {csv_path}")
-    return 0
+
+
+def main() -> int:
+    parser = build_argument_parser()
+    args = parser.parse_args()
+    try:
+        input_paths = collect_input_wavs(args.input_wav, args.recursive)
+        output_prefixes = build_output_prefixes(input_paths, args)
+    except (OSError, ValueError) as error:
+        parser.exit(2, f"error: {error}\n")
+
+    failures: list[tuple[pathlib.Path, str]] = []
+    for item_number, (input_path, output_prefix) in enumerate(
+        zip(input_paths, output_prefixes), start=1
+    ):
+        try:
+            result = run(args, input_path, output_prefix)
+        except (OSError, ValueError) as error:
+            failures.append((input_path, str(error)))
+            print(
+                f"[{item_number}/{len(input_paths)}] Failed: {input_path}: {error}",
+                file=sys.stderr,
+            )
+            continue
+        print_result(input_path, result, item_number, len(input_paths))
+
+    succeeded = len(input_paths) - len(failures)
+    if len(input_paths) > 1:
+        print(
+            f"Batch complete: {succeeded} succeeded, {len(failures)} failed, "
+            f"{len(input_paths)} total"
+        )
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
