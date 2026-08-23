@@ -25,6 +25,36 @@ inline const char* audioModulationModeName(AudioModulationMode mode) {
   }
 }
 
+enum class AudioProcessingMode : uint8_t {
+  kRaw,
+  kLoudnessEnhanced,
+};
+
+inline const char* audioProcessingModeName(AudioProcessingMode mode) {
+  switch (mode) {
+    case AudioProcessingMode::kRaw:
+      return "RAW";
+    case AudioProcessingMode::kLoudnessEnhanced:
+    default:
+      return "LOUD";
+  }
+}
+
+enum class AudioDriveMode : uint8_t {
+  kStandard,
+  kBoost,
+};
+
+inline const char* audioDriveModeName(AudioDriveMode mode) {
+  switch (mode) {
+    case AudioDriveMode::kStandard:
+      return "STANDARD";
+    case AudioDriveMode::kBoost:
+    default:
+      return "BOOST";
+  }
+}
+
 enum class ModulationFrameStatus : uint8_t {
   kIdle,
   kRunning,

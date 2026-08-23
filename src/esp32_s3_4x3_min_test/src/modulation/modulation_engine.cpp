@@ -15,18 +15,19 @@ void ModulationEngine::stop() {
   audioModulator_.stop();
 }
 
-bool ModulationEngine::startEnvelopeTone() {
+bool ModulationEngine::startEnvelopeTone(uint32_t toneHz) {
   if (!initialized_) return false;
 
   audioModulator_.stop();
-  envelopeModulator_.reset();
+  if (!envelopeModulator_.reset(toneHz, audioDriveMode_)) return false;
   mode_ = Mode::kEnvelopeTone;
   return true;
 }
 
 bool ModulationEngine::startAudio(bool loop) {
   if (!initialized_ ||
-      !audioModulator_.start(audioModulationMode_, loop)) {
+      !audioModulator_.start(audioModulationMode_, audioProcessingMode_,
+                             audioDriveMode_, loop)) {
     return false;
   }
 
@@ -40,6 +41,22 @@ void ModulationEngine::setAudioModulationMode(AudioModulationMode mode) {
 
 AudioModulationMode ModulationEngine::audioModulationMode() const {
   return audioModulationMode_;
+}
+
+void ModulationEngine::setAudioProcessingMode(AudioProcessingMode mode) {
+  audioProcessingMode_ = mode;
+}
+
+AudioProcessingMode ModulationEngine::audioProcessingMode() const {
+  return audioProcessingMode_;
+}
+
+void ModulationEngine::setAudioDriveMode(AudioDriveMode mode) {
+  audioDriveMode_ = mode;
+}
+
+AudioDriveMode ModulationEngine::audioDriveMode() const {
+  return audioDriveMode_;
 }
 
 ModulationFrame ModulationEngine::nextFrame() {

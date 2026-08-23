@@ -28,13 +28,21 @@ class UltrasonicApp final {
     kEnvelopeTone,
     kUseDsbAm,
     kUseSram,
+    kUseRawAudio,
+    kUseEnhancedAudio,
+    kUseStandardDrive,
+    kUseBoostDrive,
+    kCarrierDown,
+    kCarrierUp,
+    kCarrierReset,
+    kCarrierReport,
     kAudioOnce,
     kAudioLoop,
   };
 
   struct Command {
     CommandType type;
-    uint8_t channel;
+    uint32_t value;
   };
 
   static constexpr uint32_t kTimerEvent = 1U << 0;
@@ -51,14 +59,20 @@ class UltrasonicApp final {
   void controlTask();
   void playbackTask();
   void handleSerial();
+  void handleNumericInput();
   void printHelp() const;
-  bool enqueue(CommandType type, uint8_t channel = 0);
+  bool enqueue(CommandType type, uint32_t value = 0);
 
   bool handleCommand(const Command& command);
   void startSingle(uint8_t channel);
   void startAllCarrier();
-  void startEnvelopeTone();
+  void startEnvelopeTone(uint32_t toneHz);
   void selectAudioModulation(AudioModulationMode mode);
+  void selectAudioProcessing(AudioProcessingMode mode);
+  void selectAudioDrive(AudioDriveMode mode);
+  void adjustCarrier(int32_t deltaHz);
+  void resetCarrier();
+  void reportCarrier() const;
   void startAudio(bool loop);
   void stopOutput(bool printStatus = true);
 
@@ -82,6 +96,9 @@ class UltrasonicApp final {
   portMUX_TYPE timerMux_ = portMUX_INITIALIZER_UNLOCKED;
 
   uint32_t pendingTimerTicks_ = 0;
+  uint32_t numericInputValue_ = 0;
+  bool numericInputActive_ = false;
+  bool numericInputOverflow_ = false;
   bool sampleTimerRunning_ = false;
   uint64_t skippedFrameCount_ = 0;
   uint32_t maximumTimerBacklog_ = 0;

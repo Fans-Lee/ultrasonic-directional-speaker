@@ -17,7 +17,7 @@ esp_err_t UltrasonicDriver::begin() {
   timerConfig.speed_mode = kSpeedMode;
   timerConfig.duty_resolution = kResolution;
   timerConfig.timer_num = kTimer;
-  timerConfig.freq_hz = kCarrierHz;
+  timerConfig.freq_hz = carrierHz_;
   // 80 MHz APB / (40 kHz * 1024) = 500/256，可由 LEDC 精确分频。
   timerConfig.clk_cfg = LEDC_USE_APB_CLK;
 
@@ -80,6 +80,22 @@ esp_err_t UltrasonicDriver::setAllDuty(uint32_t duty) {
     if (firstError == ESP_OK && error != ESP_OK) firstError = error;
   }
   return firstError;
+}
+
+esp_err_t UltrasonicDriver::setCarrierFrequency(uint32_t frequencyHz) {
+  if (!initialized_) return ESP_ERR_INVALID_STATE;
+  if (frequencyHz < kMinimumCarrierHz ||
+      frequencyHz > kMaximumCarrierHz) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  const esp_err_t error = ledc_set_freq(kSpeedMode, kTimer, frequencyHz);
+  if (error != ESP_OK) return error;
+
+  const uint32_t actualFrequency = ledc_get_freq(kSpeedMode, kTimer);
+  if (actualFrequency == 0) return ESP_FAIL;
+  carrierHz_ = actualFrequency;
+  return ESP_OK;
 }
 
 esp_err_t UltrasonicDriver::stop() {

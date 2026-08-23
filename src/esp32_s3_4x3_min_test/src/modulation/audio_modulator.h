@@ -12,7 +12,9 @@ namespace ultrasonic {
 class AudioModulator final {
  public:
   bool begin(const DutyConfig& dutyConfig);
-  bool start(AudioModulationMode modulationMode, bool loop);
+  bool start(AudioModulationMode modulationMode,
+             AudioProcessingMode processingMode, AudioDriveMode driveMode,
+             bool loop);
   void stop();
   ModulationFrame nextFrame();
   ModulationFrameStatus skipFrames(uint32_t frameCount);
@@ -21,11 +23,17 @@ class AudioModulator final {
  private:
   uint8_t readSample(uint32_t index) const;
 
-  DsbAmModulator dsbAmModulator_;
-  SramModulator sramModulator_;
+  DsbAmModulator standardDsbAmModulator_;
+  SramModulator standardSramModulator_;
+  DsbAmModulator boostDsbAmModulator_;
+  SramModulator boostSramModulator_;
   uint8_t demoSineLut_[256] = {};
+  uint8_t loudnessLut_[256] = {};
   uint32_t sampleIndex_ = 0;
   AudioModulationMode modulationMode_ = AudioModulationMode::kDsbAm;
+  AudioProcessingMode processingMode_ =
+      AudioProcessingMode::kLoudnessEnhanced;
+  AudioDriveMode driveMode_ = AudioDriveMode::kBoost;
   bool loop_ = false;
   bool initialized_ = false;
   bool running_ = false;
