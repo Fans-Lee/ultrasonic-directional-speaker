@@ -15,10 +15,10 @@ Consequently, ``H(f) * G(f)`` is approximately one above the regularization
 frequency and is exactly one at the reference frequency.  Regularization is
 necessary because an exact inverse is unbounded at 0 Hz.  DC is removed.
 
-Run from the project root with the project's virtual environment:
+Run from the project root with uv:
 
-    .venv/Scripts/python.exe utils/wav_frequency_squared_compensation.py input.wav
-    .venv/Scripts/python.exe utils/wav_frequency_squared_compensation.py \
+    uv run python utils/wav_frequency_squared_compensation.py input.wav
+    uv run python utils/wav_frequency_squared_compensation.py \
         input.wav output.wav --reference-frequency 1000 --regularization-frequency 20
 
 Only uncompressed integer PCM WAV files with 8/16/24/32-bit samples are

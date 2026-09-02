@@ -3,7 +3,7 @@
 
 仅使用 Python 标准库。输入 WAV 必须是未压缩 PCM（8/16/24/32 bit）。
 用法：
-  python wav_to_audio_header.py input.wav audio_data.h
+  uv run python utils/wav_to_audio_header.py input.wav audio_data.h
 """
 
 from __future__ import annotations

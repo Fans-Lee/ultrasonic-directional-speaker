@@ -34,6 +34,23 @@ ESP32-S3 GPIO4
 - [esp32_s3_4x3_min_test.ino](src/esp32_s3_4x3_min_test/esp32_s3_4x3_min_test.ino)：可直接编译的测试固件；
 - 01～08 文档记录从原型扩展到 96 阵元、8/16 通道电子转向系统的原研究路线。
 
+## Python 工具环境
+
+本项目使用 [uv](https://docs.astral.sh/uv/) 管理 Python 版本、虚拟环境和依赖。首次使用时，在项目根目录执行：
+
+```powershell
+uv sync --locked
+```
+
+依赖在 `pyproject.toml` 中声明，完整版本由 `uv.lock` 锁定。运行 `utils/` 下的工具时无需手动激活虚拟环境，例如：
+
+```powershell
+uv run python utils/wav_time_frequency.py input.wav
+uv run python utils/wav_to_audio_header.py input.wav audio_data.h
+```
+
+新增或移除依赖请使用 `uv add <包名>` 或 `uv remove <包名>`，并提交同步更新的 `pyproject.toml` 和 `uv.lock`。
+
 ---
 
 ## 1. 项目要解决什么问题
