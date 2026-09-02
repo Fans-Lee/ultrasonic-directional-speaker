@@ -196,16 +196,10 @@ Arduino IDE 选择：
 
 ### 6.2 换成自己的WAV音频
 
-准备一段尽量短、语音清晰、没有强低音的未压缩PCM WAV。建议先用2～5秒语音，不要一开始放音乐。在本目录打开PowerShell并运行：
+准备一段尽量短、语音清晰、没有强低音的未压缩PCM WAV。建议先用2～5秒语音，不要一开始放音乐。先在项目根目录执行 `uv sync --locked`，然后在本目录打开 PowerShell 并运行：
 
 ```powershell
-python ..\..\utils\wav_to_audio_header.py .\我的音频.wav .\src\data\audio_data.h
-```
-
-如果电脑使用 `py` 启动Python：
-
-```powershell
-py ..\..\utils\wav_to_audio_header.py .\我的音频.wav .\src\data\audio_data.h
+uv run python ..\..\utils\wav_to_audio_header.py .\我的音频.wav .\src\data\audio_data.h
 ```
 
 转换器会自动合并为单声道、重采样为8 kHz、转成8位无符号PCM、去除直流、归一化音量并增加短淡入淡出。转换器只接受未压缩PCM WAV，最长30秒；MP3、AAC需要先用音频软件导出为WAV。

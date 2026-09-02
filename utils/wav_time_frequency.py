@@ -8,11 +8,11 @@ The script uses a Hann-window short-time Fourier transform (STFT) and creates:
 
 Examples (run from the project root):
 
-    .venv/Scripts/python.exe utils/wav_time_frequency.py input.wav
-    .venv/Scripts/python.exe utils/wav_time_frequency.py first.wav second.wav
-    .venv/Scripts/python.exe utils/wav_time_frequency.py data/ --recursive \
+    uv run python utils/wav_time_frequency.py input.wav
+    uv run python utils/wav_time_frequency.py first.wav second.wav
+    uv run python utils/wav_time_frequency.py data/ --recursive \
         --output-dir analysis/
-    .venv/Scripts/python.exe utils/wav_time_frequency.py input.wav \
+    uv run python utils/wav_time_frequency.py input.wav \
         --output-prefix analysis/input --max-frequency 8000
 
 Only uncompressed integer PCM WAV files with 8/16/24/32-bit samples are
