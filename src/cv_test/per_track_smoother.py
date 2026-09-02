@@ -7,8 +7,10 @@ import cv2
 import numpy as np
 
 if __package__:
+    from .tracking_geometry import boxes_are_duplicates, shift_bbox
     from .tracking_models import Point, TrackedPerson
 else:
+    from tracking_geometry import boxes_are_duplicates, shift_bbox
     from tracking_models import Point, TrackedPerson
 
 
@@ -67,10 +69,23 @@ class _TrackFilterState:
 class PerTrackAimSmoother:
     """按 track_id 平滑观测，并为短暂漏检的轨迹输出预测点。"""
 
-    def __init__(self, max_prediction_frames: int = 30):
+    def __init__(
+        self,
+        max_prediction_frames: int = 12,
+        duplicate_iou_threshold: float = 0.55,
+        duplicate_containment_threshold: float = 0.85,
+    ):
         if max_prediction_frames < 0:
             raise ValueError("max_prediction_frames 不能小于 0")
+        for name, value in (
+            ("duplicate_iou_threshold", duplicate_iou_threshold),
+            ("duplicate_containment_threshold", duplicate_containment_threshold),
+        ):
+            if not 0.0 < value <= 1.0:
+                raise ValueError(f"{name} 必须在 (0, 1] 范围内")
         self.max_prediction_frames = max_prediction_frames
+        self.duplicate_iou_threshold = duplicate_iou_threshold
+        self.duplicate_containment_threshold = duplicate_containment_threshold
         self._states: Dict[int, _TrackFilterState] = {}
 
     def update(
@@ -120,6 +135,25 @@ class PerTrackAimSmoother:
                 state.missed_frames > self.max_prediction_frames
                 or prediction is None
             ):
+                del self._states[track_id]
+                continue
+
+            predicted_bbox = shift_bbox(
+                state.last_person.bbox_xyxy,
+                state.last_person.detection_center,
+                prediction,
+            )
+            if any(
+                boxes_are_duplicates(
+                    predicted_bbox,
+                    person.bbox_xyxy,
+                    self.duplicate_iou_threshold,
+                    self.duplicate_containment_threshold,
+                )
+                for person in output
+                if person.observed
+            ):
+                # 常见于跟踪器切换 ID：新观测应覆盖旧 ID 的外推框。
                 del self._states[track_id]
                 continue
 

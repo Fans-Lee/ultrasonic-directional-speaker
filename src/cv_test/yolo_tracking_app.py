@@ -26,7 +26,12 @@ class TrackingConfig:
     tracker_config_path: str = "bytetrack.yaml"
     confidence: float = 0.10
     image_size: int = 512
-    max_prediction_frames: int = 30
+    nms_iou_threshold: float = 0.60
+    duplicate_iou_threshold: float = 0.70
+    duplicate_containment_threshold: float = 0.90
+    prediction_duplicate_iou_threshold: float = 0.55
+    prediction_duplicate_containment_threshold: float = 0.85
+    max_prediction_frames: int = 12
     window_name: str = "multi-person tracking"
 
 
@@ -52,9 +57,18 @@ def run_person_tracking(config):
             tracker_config_path=config.tracker_config_path,
             confidence=config.confidence,
             image_size=config.image_size,
+            nms_iou_threshold=config.nms_iou_threshold,
+            duplicate_iou_threshold=config.duplicate_iou_threshold,
+            duplicate_containment_threshold=config.duplicate_containment_threshold,
             classes=(0,),
         )
-        aim_smoother = PerTrackAimSmoother(config.max_prediction_frames)
+        aim_smoother = PerTrackAimSmoother(
+            config.max_prediction_frames,
+            duplicate_iou_threshold=config.prediction_duplicate_iou_threshold,
+            duplicate_containment_threshold=(
+                config.prediction_duplicate_containment_threshold
+            ),
+        )
         last_time = time.monotonic()
 
         while True:

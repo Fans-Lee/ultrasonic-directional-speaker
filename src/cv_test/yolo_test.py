@@ -24,7 +24,12 @@ def main():
         ),
         confidence=0.10,      # 保留低置信度检测供 ByteTrack 二次关联
         image_size=512,
-        max_prediction_frames=30,
+        nms_iou_threshold=0.60,
+        duplicate_iou_threshold=0.70,
+        duplicate_containment_threshold=0.90,
+        prediction_duplicate_iou_threshold=0.55,
+        prediction_duplicate_containment_threshold=0.85,
+        max_prediction_frames=12,  # 避免旧 ID 的预测框长时间残留
     )
     run_person_tracking(config)
 
