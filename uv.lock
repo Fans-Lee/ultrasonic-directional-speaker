@@ -11,23 +11,27 @@ resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'darwin'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
     "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and sys_platform == 'win32'",
     "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
     "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
-    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.10' and sys_platform == 'win32'",
     "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
     "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
     "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
+conflicts = [[
+    { package = "ultrasonic-directional-speaker", extra = "cuda" },
+    { package = "ultrasonic-directional-speaker", extra = "xpu" },
+]]
 
 [[package]]
 name = "anyio"
 version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "idna" },
-    { name = "typing-extensions" },
+    { name = "idna", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
@@ -144,7 +148,7 @@ resolution-markers = [
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/f6/31a8f28b4a2a4fa0e01085e542f3081ab0588eff8e589d39d775172c9792/contourpy-1.3.0.tar.gz", hash = "sha256:7ffa0db17717a8ffb127efd0c95a4362d996b892c2904db72428d5b52e1938a4", size = 13464370, upload-time = "2024-08-27T21:00:03.328Z" }
 wheels = [
@@ -207,7 +211,7 @@ resolution-markers = [
     "python_full_version == '3.10.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version == '3.10.*' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/66/54/eb9bfc647b19f2009dd5c7f5ec51c4e6ca831725f1aea7a993034f483147/contourpy-1.3.2.tar.gz", hash = "sha256:b6945942715a034c671b7fc54f9588126b0b8bf23db2696e3ca8328f3ff0ab54", size = 13466130, upload-time = "2025-04-15T17:47:53.79Z" }
 wheels = [
@@ -264,7 +268,7 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880", size = 13466174, upload-time = "2025-07-26T12:03:12.549Z" }
 wheels = [
@@ -302,15 +306,18 @@ name = "cuda-bindings"
 version = "13.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder" },
+    { name = "cuda-pathfinder", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/21/8464d133752951c154feafb3b65c297e7d80f301183d220bec4c830f1441/cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:120fcc53d57903df529c3486962c56528cba5b7d6c57c99537320ed9922c8b86", size = 6073403, upload-time = "2026-05-29T23:11:36.22Z" },
     { url = "https://files.pythonhosted.org/packages/a8/1f/5ef51f5fbaa5d4d3201bb3d7555af028ec1aa4416275ccbf73c9e34e3d2d/cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9851b0caa8bfd3bc6fa054eaf57bea7c8e9c3a62db2d2621224677f49f3c53d0", size = 6675244, upload-time = "2026-05-29T23:11:38.664Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/64/bb17e4d168569ef7be05c44474fe3dc19278d60a69ba228e45a431c86444/cuda_bindings-13.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:c0c4b1a995098c46695c24257a342dc97d6e6d3f3050b944c9f43bd26d734051", size = 5625597, upload-time = "2026-05-29T23:11:40.808Z" },
     { url = "https://files.pythonhosted.org/packages/51/6b/457ca12dad3ee9bfcc9a545cfd6b64b359ba49de40f776f6e028e678f262/cuda_bindings-13.3.1-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c5879712accf6e14bb01aa5e67440eb84998b8d104b509cc7a6dc0b8f656a474", size = 6053539, upload-time = "2026-05-29T23:11:43.19Z" },
     { url = "https://files.pythonhosted.org/packages/95/7a/c5e3c34a409b148f5c0f5a4ea374158f95d488862c1dffedf9aa5c639df9/cuda_bindings-13.3.1-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:04436a9364059c84b8f9636f359eccda1cf814341f5b670c71d80d2f79dbc708", size = 6674166, upload-time = "2026-05-29T23:11:45.478Z" },
+    { url = "https://files.pythonhosted.org/packages/93/f7/0e35987a21914f84068061dcf4b61466ccbce1c62ddc9727596d5ed0c26f/cuda_bindings-13.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:507b0e19e7f934c5e30f30f0244ad70a75812619a7d3a0d742543caae1bd50f1", size = 5664286, upload-time = "2026-05-29T23:11:47.719Z" },
     { url = "https://files.pythonhosted.org/packages/ce/67/5e7dba1ba576dd73da5dee894ca076ca5e959450dfff66d6d510a255d1f7/cuda_bindings-13.3.1-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c7855c4868aabc0cfae28abbe83d56734bdfbd08f08fc234ac1912a12858bf49", size = 6025351, upload-time = "2026-05-29T23:11:49.685Z" },
     { url = "https://files.pythonhosted.org/packages/39/2a/6d2e9047d1fb243dbaa364b01e0297534b9ed7fd27dba1c9f361519cf69b/cuda_bindings-13.3.1-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e32d08f71ebcdf00f0f41eab2eb37e8da94c8ed411cc9f7f7a019ce6b34abe3a", size = 6657965, upload-time = "2026-05-29T23:11:52.227Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/95/872a0392122f1fb43fcb06869790ef3171f37beee9f7db8f441739113570/cuda_bindings-13.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:b134dd8c5c66ae4c4ad814f7aee88fd215353c077010cbc47e3b55ed35ec9eff", size = 5875099, upload-time = "2026-05-29T23:11:54.635Z" },
 ]
 
 [[package]]
@@ -331,43 +338,43 @@ wheels = [
 
 [package.optional-dependencies]
 cublas = [
-    { name = "nvidia-cublas", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-cuda-nvrtc", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cublas", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-nvrtc", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cudart = [
-    { name = "nvidia-cuda-runtime", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cuda-runtime", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cufft = [
-    { name = "nvidia-cufft", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-nvjitlink", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cufft", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cufile = [
-    { name = "nvidia-cufile", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cufile", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cupti = [
-    { name = "nvidia-cuda-cupti", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cuda-cupti", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 curand = [
-    { name = "nvidia-curand", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-curand", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cusolver = [
-    { name = "nvidia-cublas", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-cusolver", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-cusparse", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-nvjitlink", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cublas", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusolver", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparse", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 cusparse = [
-    { name = "nvidia-cusparse", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
-    { name = "nvidia-nvjitlink", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cusparse", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 nvjitlink = [
-    { name = "nvidia-nvjitlink", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 nvrtc = [
-    { name = "nvidia-cuda-nvrtc", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-cuda-nvrtc", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 nvtx = [
-    { name = "nvidia-nvtx", marker = "platform_machine == 'aarch64' or platform_machine == 'x86_64'" },
+    { name = "nvidia-nvtx", marker = "(python_full_version >= '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'aarch64' and platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'aarch64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine == 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 
 [[package]]
@@ -377,6 +384,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/95/a3dbbb5028f35eafb79008e7522a75244477d2838f38cbb722248dabc2a8/cycler-0.12.1.tar.gz", hash = "sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c", size = 7615, upload-time = "2023-10-07T05:32:18.335Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl", hash = "sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30", size = 8321, upload-time = "2023-10-07T05:32:16.783Z" },
+]
+
+[[package]]
+name = "dpcpp-cpp-rt"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-openmp", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-sycl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2f/f9/dbaaabd6b2d35a824531da534b1b20945006b9500ca696145f2987e14aec/dpcpp_cpp_rt-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:670285c8aa5f242456d3d95b9fa7cec12ad2ac34d785470780af4cd58be054c0", size = 28824, upload-time = "2025-04-30T09:16:00.212Z" },
+    { url = "https://files.pythonhosted.org/packages/72/6d/d10744b4ce0273b26d6c7e35cea8fe9a2b1639c2bbc81c724c64194b5ea2/dpcpp_cpp_rt-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:5470a3b81c90a4064b0495fd05257e26cacd8e4c9bed1ed15481798cd08f41ff", size = 58375, upload-time = "2025-04-30T09:15:25.547Z" },
 ]
 
 [[package]]
@@ -566,8 +587,8 @@ name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "certifi" },
-    { name = "h11" },
+    { name = "certifi", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "h11", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/06/94/82699a10bca87a5556c9c59b5963f2d039dbd239f25bc2a63907a05a14cb/httpcore-1.0.9.tar.gz", hash = "sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8", size = 85484, upload-time = "2025-04-24T22:06:22.219Z" }
 wheels = [
@@ -579,10 +600,10 @@ name = "httpx"
 version = "0.28.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio" },
-    { name = "certifi" },
-    { name = "httpcore" },
-    { name = "idna" },
+    { name = "anyio", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "certifi", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "httpcore", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "idna", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
@@ -599,11 +620,20 @@ wheels = [
 ]
 
 [[package]]
+name = "impi-rt"
+version = "2021.15.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/3f/99b4773fd9ec07b95ce7f5c62832b0981eea278c9fbbc9ba15007c182bb5/impi_rt-2021.15.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:1e900c630d6396c8a33816de9866d74f06419903db454899045fadb05ab390f1", size = 82633082, upload-time = "2025-03-21T15:28:32.914Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/59/21ad0caa10105e1e53d5902eb134b0de096b399b5475957015816e1afc86/impi_rt-2021.15.0-py2.py3-none-win_amd64.whl", hash = "sha256:d5ce4ae07c6af2b4deff6ec29a3171a922606fbd376400bc26e6955804db937e", size = 15409298, upload-time = "2025-03-21T15:30:17.561Z" },
+]
+
+[[package]]
 name = "importlib-metadata"
 version = "8.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version < '3.11' and platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.11' and sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version >= '3.11' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f3/49/3b30cad09e7771a4982d9975a8cbf64f00d4a1ececb53297f1d9a7be1b10/importlib_metadata-8.7.1.tar.gz", hash = "sha256:49fef1ae6440c182052f407c8d34a68f72efc36db9ca90dc0113398f2fdde8bb", size = 57107, upload-time = "2025-12-21T10:00:19.278Z" }
 wheels = [
@@ -615,11 +645,89 @@ name = "importlib-resources"
 version = "6.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693, upload-time = "2025-01-03T18:51:56.698Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461, upload-time = "2025-01-03T18:51:54.306Z" },
+]
+
+[[package]]
+name = "intel-cmplr-lib-rt"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/9d/c0462d37c81aaf3fad991f5c0feffebcd1d62b9fd4e0608f75599241dcbf/intel_cmplr_lib_rt-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:42409cfb10b8ed2c90fa985cf156f26b51cec61b1fb0bdff04afdeefa1afd875", size = 47235223, upload-time = "2025-04-30T09:15:52.542Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/df/6237c9a478e961d8fa6a84c9cd792fb37bde49cac127b2b3b64475e5f383/intel_cmplr_lib_rt-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:500235b97d42d83657013dd2b2a35689ee60920ba0a026de5ca2bed9e7b30f2a", size = 17359058, upload-time = "2025-04-30T09:15:33.487Z" },
+]
+
+[[package]]
+name = "intel-cmplr-lib-ur"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "umf", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/0b/f29540ba90d60e06a497f1fa9af969bfaf05acf8619358c9c7ecc1750a6b/intel_cmplr_lib_ur-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:b34ddb46fc70e21209297ac13f800e37be390df1589f4dd22e194b289871f30e", size = 26333678, upload-time = "2025-04-30T09:16:14.695Z" },
+    { url = "https://files.pythonhosted.org/packages/00/17/aec63daf936af18354de6af8f4d8f8956b0964ff442248bd29bbafd6c6b3/intel_cmplr_lib_ur-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:a4d2fd91930ea017e9c8dd757b8159352aa7852344eb609d8f855b9efea11cea", size = 1063878, upload-time = "2025-04-30T09:15:30.784Z" },
+]
+
+[[package]]
+name = "intel-cmplr-lic-rt"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/a0/474df1df0c3dc48f0886da12da02e77fcee48c8f85115232ad1f1468d6fa/intel_cmplr_lic_rt-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:561ff766d70e499d334c1fccdf207c26b29c7a4b76bb783548cc2f0d9c8ad628", size = 18911, upload-time = "2025-04-30T09:15:56.034Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/cf/b4931302c4298c4ed64ff6357e8569715283c520451ccec140b748bfc694/intel_cmplr_lic_rt-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:524ad6176d12df567386548823baf8603976e58cc23ab0a8d3da544bfee259f2", size = 49550, upload-time = "2025-04-30T09:15:39.476Z" },
+]
+
+[[package]]
+name = "intel-opencl-rt"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "intel-cmplr-lic-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "tbb", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/f8/faa98f4040b852f35fbab26e6c0c7bd25896110fb2c9f84d25aeef91f5f0/intel_opencl_rt-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:0e194c2ba8540a41b811721ced9de88ec0bb8eba17cc4a46af91f8ce67941bc1", size = 195361529, upload-time = "2025-04-30T09:16:24.925Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/ae/cdadb653be6593cc69e922c03f72fc847f74c99c1e69c1b4f3638b7f5177/intel_opencl_rt-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:1c134e0ffbe05cf58028d93d7f66f346f4a429370200aedda094d840f3f2a50a", size = 105709942, upload-time = "2025-04-30T09:15:18.02Z" },
+]
+
+[[package]]
+name = "intel-openmp"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "intel-cmplr-lib-ur", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/f8/839c84fc630e868b6ed4322c9c5bd5ed8ee8a30a27985cb027d627e25886/intel_openmp-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:c3d3255f4076b86b6fb7e556492c4722be583bb958f095adc92d7a0e3807ec51", size = 48598966, upload-time = "2025-04-30T09:16:04.462Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/b8/0fb9f8562a73ff5a5d469c7faed422899618ab496a4ef629c1a73a92bb30/intel_openmp-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:4a63f6e0a302f08f8fab1109b91b4678f790e0ef508942ee4b2438ce1a253a60", size = 12713497, upload-time = "2025-04-30T09:15:27.877Z" },
+]
+
+[[package]]
+name = "intel-pti"
+version = "0.12.3"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/21/111954e2b0c08d12340a9cc2e913bf757fa47919df81383aa935332f3ab8/intel_pti-0.12.3-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:547b96effeb1e7480ebf5c55844fd7d84b49d8aedf78782625657a47279f0095", size = 1981359, upload-time = "2025-05-21T15:51:57.043Z" },
+    { url = "https://files.pythonhosted.org/packages/08/15/dadfb4d08d8c0f256f933f6bd4017b7011c5808e6bafe2b1c077afd59d6d/intel_pti-0.12.3-py2.py3-none-win_amd64.whl", hash = "sha256:46bbbea735cb04a263d8e5c64bb8fb5e274cc7af185f9987bcb395f0b3c5e693", size = 742334, upload-time = "2025-05-21T15:51:59.455Z" },
+]
+
+[[package]]
+name = "intel-sycl-rt"
+version = "2025.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "intel-cmplr-lib-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-cmplr-lib-ur", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-cmplr-lic-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/f8/adb191377b4f473a8f1b93d1fd832e4e0c608dc5793008f1e4bf787a2396/intel_sycl_rt-2025.1.1-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:af82eeab518519c1177ebfed9e05a508a6f2c69795b33c2cf8e54b8020909b30", size = 24178667, upload-time = "2025-04-30T09:16:10.284Z" },
+    { url = "https://files.pythonhosted.org/packages/76/3d/b708798c8060d0e17fdf86430acd1d2c4b0cb0be1cb75bb4a7f724523f68/intel_sycl_rt-2025.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:34330646844771f03d040b05b39668ff8ff6f647285adac95421209be4f28d5b", size = 11140831, upload-time = "2025-04-30T09:15:36.795Z" },
 ]
 
 [[package]]
@@ -903,19 +1011,19 @@ name = "matplotlib"
 version = "3.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "contourpy", version = "1.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "contourpy", version = "1.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "cycler" },
-    { name = "fonttools", version = "4.60.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "fonttools", version = "4.64.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "importlib-resources", marker = "python_full_version < '3.10'" },
-    { name = "kiwisolver", version = "1.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "kiwisolver", version = "1.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "fonttools", version = "4.60.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fonttools", version = "4.64.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "importlib-resources", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "kiwisolver", version = "1.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "kiwisolver", version = "1.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "pyparsing" },
     { name = "python-dateutil" },
 ]
@@ -949,6 +1057,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/87/b8/2737456e566e9f4d94ae76b8aa0d953d9acb847714f9a7ad80184474f5be/matplotlib-3.9.4-pp39-pypy39_pp73-macosx_11_0_arm64.whl", hash = "sha256:09debb9ce941eb23ecdbe7eab972b1c3e0276dcf01688073faff7b0f61d6c6ca", size = 7769300, upload-time = "2024-12-13T05:56:21.315Z" },
     { url = "https://files.pythonhosted.org/packages/b2/1f/e709c6ec7b5321e6568769baa288c7178e60a93a9da9e682b39450da0e29/matplotlib-3.9.4-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bcc53cf157a657bfd03afab14774d54ba73aa84d42cfe2480c91bd94873952db", size = 8313423, upload-time = "2024-12-13T05:56:26.719Z" },
     { url = "https://files.pythonhosted.org/packages/5e/b6/5a1f868782cd13f053a679984e222007ecff654a9bfbac6b27a65f4eeb05/matplotlib-3.9.4-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:ad45da51be7ad02387801fd154ef74d942f49fe3fcd26a64c94842ba7ec0d865", size = 7854624, upload-time = "2024-12-13T05:56:29.359Z" },
+]
+
+[[package]]
+name = "mkl"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "intel-openmp", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "tbb", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/9a/97f134eaed418266751410793104782052e66c2002eaaf557f55afa72414/mkl-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:1c201bc314304760d995a2b5cc7df9175afba2d3eb7aa70c4917ebe35c2f48de", size = 186817693, upload-time = "2025-03-21T15:23:24.393Z" },
+    { url = "https://files.pythonhosted.org/packages/20/01/34d98bfa40019e5ce3731efe1a25da4f5dd6d25090b143916b866a877733/mkl-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:6f459efc394360675efa78c9e9e6fdfa2883f1c730b0323bca414e8df47d4598", size = 151134738, upload-time = "2025-03-21T15:25:33.053Z" },
 ]
 
 [[package]]
@@ -1058,11 +1179,12 @@ name = "nvidia-cublas"
 version = "13.1.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cuda-nvrtc" },
+    { name = "nvidia-cuda-nvrtc", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/a1/0bd24ee8c8d03adac032fd2909426a00c88f8c57961b1277ded97f91119f/nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:b7a210458267ac818974c53038fbec2e969d5c99f305ab15c72522fa9f001dd5", size = 542848918, upload-time = "2026-04-08T18:46:22.985Z" },
     { url = "https://files.pythonhosted.org/packages/3b/cd/154ca20c38269e05eff77c1464e6c1da89f50a6390b565e9d82e06bc11e1/nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:37936a16db8fe4ac1f065c2139360608a543a09275cb1a1af612e08cfa065436", size = 423138758, upload-time = "2026-04-08T18:46:58.655Z" },
+    { url = "https://files.pythonhosted.org/packages/45/9e/2f562daf80eb8f7a685fb7bea4fda71f6048e4f359d6fdd1b6e70206cb2f/nvidia_cublas-13.1.1.3-py3-none-win_amd64.whl", hash = "sha256:b6cdce694e47ff6aadf0a69df1cab6628d696f5ff56e8d16af50309d855fa20f", size = 404358158, upload-time = "2026-04-08T18:47:26.987Z" },
 ]
 
 [[package]]
@@ -1070,7 +1192,9 @@ name = "nvidia-cublas-cu12"
 version = "12.8.4.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/99/db44d685f0e257ff0e213ade1964fc459b4a690a73293220e98feb3307cf/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:b86f6dd8935884615a0683b663891d43781b819ac4f2ba2b0c9604676af346d0", size = 590537124, upload-time = "2025-03-07T01:43:53.556Z" },
     { url = "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142", size = 594346921, upload-time = "2025-03-07T01:44:31.254Z" },
+    { url = "https://files.pythonhosted.org/packages/70/61/7d7b3c70186fb651d0fbd35b01dbfc8e755f69fd58f817f3d0f642df20c3/nvidia_cublas_cu12-12.8.4.1-py3-none-win_amd64.whl", hash = "sha256:47e9b82132fa8d2b4944e708049229601448aaad7e6f296f630f2d1a32de35af", size = 567544208, upload-time = "2025-03-07T01:53:30.535Z" },
 ]
 
 [[package]]
@@ -1080,6 +1204,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/2a/80353b103fc20ce05ef51e928daed4b6015db4aaa9162ed0997090fe2250/nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_aarch64.whl", hash = "sha256:796bd679890ee55fb14a94629b698b6db54bcfd833d391d5e94017dd9d7d3151", size = 10310827, upload-time = "2025-09-04T08:26:42.012Z" },
     { url = "https://files.pythonhosted.org/packages/33/6d/737d164b4837a9bbd202f5ae3078975f0525a55730fe871d8ed4e3b952b0/nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl", hash = "sha256:4eb01c08e859bf924d222250d2e8f8b8ff6d3db4721288cf35d14252a4d933c8", size = 10715597, upload-time = "2025-09-04T08:26:51.312Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/df/b74b10025c1205695c5676373f2edd3e87a7202cc62ead0dfbc373b0f6ea/nvidia_cuda_cupti-13.0.85-py3-none-win_amd64.whl", hash = "sha256:683f58d301548deeefcb8f6fac1b8d907691b9d8b18eccab417f51e362102f00", size = 7736776, upload-time = "2025-09-04T08:38:08.38Z" },
 ]
 
 [[package]]
@@ -1087,7 +1212,9 @@ name = "nvidia-cuda-cupti-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/1f/b3bd73445e5cb342727fd24fe1f7b748f690b460acadc27ea22f904502c8/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:4412396548808ddfed3f17a467b104ba7751e6b58678a4b840675c56d21cf7ed", size = 9533318, upload-time = "2025-03-07T01:40:10.421Z" },
     { url = "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182", size = 10248621, upload-time = "2025-03-07T01:40:21.213Z" },
+    { url = "https://files.pythonhosted.org/packages/41/bc/83f5426095d93694ae39fe1311431b5d5a9bb82e48bf0dd8e19be2765942/nvidia_cuda_cupti_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:bb479dcdf7e6d4f8b0b01b115260399bf34154a1a2e9fe11c85c517d87efd98e", size = 7015759, upload-time = "2025-03-07T01:51:11.355Z" },
 ]
 
 [[package]]
@@ -1097,6 +1224,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/68/483a78f5e8f31b08fb1bb671559968c0ca3a065ac7acabfc7cee55214fd6/nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:ad9b6d2ead2435f11cbb6868809d2adeeee302e9bb94bcf0539c7a40d80e8575", size = 90215200, upload-time = "2025-09-04T08:28:44.204Z" },
     { url = "https://files.pythonhosted.org/packages/b7/dc/6bb80850e0b7edd6588d560758f17e0550893a1feaf436807d64d2da040f/nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d27f20a0ca67a4bb34268a5e951033496c5b74870b868bacd046b1b8e0c3267b", size = 43015449, upload-time = "2025-09-04T08:28:20.239Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/af/345fedb9f4c76c84ab4fa445b36bd4048a4d9db60e6bc76b4f913ff4b852/nvidia_cuda_nvrtc-13.0.88-py3-none-win_amd64.whl", hash = "sha256:6bcd4e7f8e205cbe644f5a98f2f799bef9556fefc89dd786e79a16312ce49872", size = 76807835, upload-time = "2025-09-04T08:39:15.274Z" },
 ]
 
 [[package]]
@@ -1105,6 +1233,8 @@ version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994", size = 88040029, upload-time = "2025-03-07T01:42:13.562Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/d1/e50d0acaab360482034b84b6e27ee83c6738f7d32182b987f9c7a4e32962/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fc1fec1e1637854b4c0a65fb9a8346b51dd9ee69e61ebaccc82058441f15bce8", size = 43106076, upload-time = "2025-03-07T01:41:59.817Z" },
+    { url = "https://files.pythonhosted.org/packages/45/51/52a3d84baa2136cc8df15500ad731d74d3a1114d4c123e043cb608d4a32b/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:7a4b6b2904850fe78e0bd179c4b655c404d4bb799ef03ddc60804247099ae909", size = 73586838, upload-time = "2025-03-07T01:52:13.483Z" },
 ]
 
 [[package]]
@@ -1114,6 +1244,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/4f/17d7b9b8e285199c58ce28e31b5c5bbaa4d8271af06a89b6405258245de2/nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:ef9bcbe90493a2b9d810e43d249adb3d02e98dd30200d86607d8d02687c43f55", size = 2261060, upload-time = "2025-10-09T08:55:15.78Z" },
     { url = "https://files.pythonhosted.org/packages/2e/24/d1558f3b68b1d26e706813b1d10aa1d785e4698c425af8db8edc3dced472/nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:7f82250d7782aa23b6cfe765ecc7db554bd3c2870c43f3d1821f1d18aebf0548", size = 2243632, upload-time = "2025-10-09T08:55:36.117Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/94/6b867483bec07da24ffa32736c79fabb94ef3a7af4d787a9d4a974868576/nvidia_cuda_runtime-13.0.96-py3-none-win_amd64.whl", hash = "sha256:f79298c8a098cec150a597c8eba58ecdab96e3bdc4b9bc4f9983635031740492", size = 2927037, upload-time = "2025-10-09T09:04:23.782Z" },
 ]
 
 [[package]]
@@ -1121,7 +1252,9 @@ name = "nvidia-cuda-runtime-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/75/f865a3b236e4647605ea34cc450900854ba123834a5f1598e160b9530c3a/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:52bf7bbee900262ffefe5e9d5a2a69a30d97e2bc5bb6cc866688caa976966e3d", size = 965265, upload-time = "2025-03-07T01:39:43.533Z" },
     { url = "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90", size = 954765, upload-time = "2025-03-07T01:40:01.615Z" },
+    { url = "https://files.pythonhosted.org/packages/30/a5/a515b7600ad361ea14bfa13fb4d6687abf500adc270f19e89849c0590492/nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:c0c6027f01505bfed6c3b21ec546f69c687689aad5f1a377554bc6ca4aa993a8", size = 944318, upload-time = "2025-03-07T01:51:01.794Z" },
 ]
 
 [[package]]
@@ -1129,10 +1262,12 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
     { url = "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8", size = 706758467, upload-time = "2025-06-06T21:54:08.597Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/90/0bd6e586701b3a890fd38aa71c387dab4883d619d6e5ad912ccbd05bfd67/nvidia_cudnn_cu12-9.10.2.21-py3-none-win_amd64.whl", hash = "sha256:c6288de7d63e6cf62988f0923f96dc339cea362decb1bf5b3141883392a7d65e", size = 692992268, upload-time = "2025-06-06T21:55:18.114Z" },
 ]
 
 [[package]]
@@ -1140,11 +1275,12 @@ name = "nvidia-cudnn-cu13"
 version = "9.20.0.48"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas" },
+    { name = "nvidia-cublas", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/56/c5/83384d846b2fd17c44bd499b36c75a45ed4f095fbbb2252294e89cea5c5c/nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:e31454ae00094b0c55319d9d15b6fa2fc50a9e1c0f5c8c80fb75258234e731e1", size = 444574296, upload-time = "2026-03-09T19:28:27.751Z" },
     { url = "https://files.pythonhosted.org/packages/6e/5e/edb9c0ae051602c3ccaffe424256463636d639e27d7f302dde9975ef9e7a/nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:0c45dd8eeb50b603f07995b1b300c62ffe6a1980482b82b3bcf94a4ca9d49304", size = 366173588, upload-time = "2026-03-09T19:29:34.474Z" },
+    { url = "https://files.pythonhosted.org/packages/78/39/21507455b1bca8b5702a9e9fc6ce73735f216f558dac2c9ede58e4d456b8/nvidia_cudnn_cu13-9.20.0.48-py3-none-win_amd64.whl", hash = "sha256:af8139732b99c0118be65ea5aac97f0d46018f8c552889e49d2fb0c6261a4a24", size = 350712614, upload-time = "2026-03-09T19:31:11.398Z" },
 ]
 
 [[package]]
@@ -1152,11 +1288,12 @@ name = "nvidia-cufft"
 version = "12.0.0.61"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/ae/f417a75c0259e85c1d2f83ca4e960289a5f814ed0cea74d18c353d3e989d/nvidia_cufft-12.0.0.61-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:2708c852ef8cd89d1d2068bdbece0aa188813a0c934db3779b9b1faa8442e5f5", size = 214053554, upload-time = "2025-09-04T08:31:38.196Z" },
     { url = "https://files.pythonhosted.org/packages/a8/2f/7b57e29836ea8714f81e9898409196f47d772d5ddedddf1592eadb8ab743/nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6c44f692dce8fd5ffd3e3df134b6cdb9c2f72d99cf40b62c32dde45eea9ddad3", size = 214085489, upload-time = "2025-09-04T08:31:56.044Z" },
+    { url = "https://files.pythonhosted.org/packages/85/b2/f8af21a2ed1beed337a6a02c5a28aeb85441f4d578ec3d529543c775ea4b/nvidia_cufft-12.0.0.61-py3-none-win_amd64.whl", hash = "sha256:2abce5b39d2f5ae12730fb7e5db6696533e36c26e2d3e8fd1750bdd2853364eb", size = 213342123, upload-time = "2025-09-04T08:40:51.145Z" },
 ]
 
 [[package]]
@@ -1164,10 +1301,12 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
     { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/ec/ce1629f1e478bb5ccd208986b5f9e0316a78538dd6ab1d0484f012f8e2a1/nvidia_cufft_cu12-11.3.3.83-py3-none-win_amd64.whl", hash = "sha256:7a64a98ef2a7c47f905aaf8931b69a3a43f27c55530c698bb2ed7c75c0b42cb7", size = 192216559, upload-time = "2025-03-07T01:53:57.106Z" },
 ]
 
 [[package]]
@@ -1185,6 +1324,7 @@ version = "1.13.1.3"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/fe/1bcba1dfbfb8d01be8d93f07bfc502c93fa23afa6fd5ab3fc7c1df71038a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc", size = 1197834, upload-time = "2025-03-07T01:45:50.723Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/f5/5607710447a6fe9fd9b3283956fceeee8a06cda1d2f56ce31371f595db2a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:4beb6d4cce47c1a0f1013d72e02b0994730359e17801d395bdcbf20cfb3bb00a", size = 1120705, upload-time = "2025-03-07T01:45:41.434Z" },
 ]
 
 [[package]]
@@ -1194,6 +1334,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/72/7c2ae24fb6b63a32e6ae5d241cc65263ea18d08802aaae087d9f013335a2/nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:133df5a7509c3e292aaa2b477afd0194f06ce4ea24d714d616ff36439cee349a", size = 61962106, upload-time = "2025-08-04T10:21:41.128Z" },
     { url = "https://files.pythonhosted.org/packages/a5/9f/be0a41ca4a4917abf5cb9ae0daff1a6060cc5de950aec0396de9f3b52bc5/nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:1aee33a5da6e1db083fe2b90082def8915f30f3248d5896bcec36a579d941bfc", size = 59544258, upload-time = "2025-08-04T10:22:03.992Z" },
+    { url = "https://files.pythonhosted.org/packages/99/27/72103153b1ffc00e09fdc40ac970235343dcd1ea8bd762e84d2d73219ffa/nvidia_curand-10.4.0.35-py3-none-win_amd64.whl", hash = "sha256:65b1710aa6961d326b411e314b374290904c5ddf41dc3f766ebc3f1d7d4ca69f", size = 55242481, upload-time = "2025-08-04T10:30:41.831Z" },
 ]
 
 [[package]]
@@ -1201,7 +1342,9 @@ name = "nvidia-curand-cu12"
 version = "10.3.9.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/5e/92aa15eca622a388b80fbf8375d4760738df6285b1e92c43d37390a33a9a/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:dfab99248034673b779bc6decafdc3404a8a6f502462201f2f31f11354204acd", size = 63625754, upload-time = "2025-03-07T01:46:10.735Z" },
     { url = "https://files.pythonhosted.org/packages/fb/aa/6584b56dc84ebe9cf93226a5cde4d99080c8e90ab40f0c27bda7a0f29aa1/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9", size = 63619976, upload-time = "2025-03-07T01:46:23.323Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/75/70c05b2f3ed5be3bb30b7102b6eb78e100da4bbf6944fd6725c012831cab/nvidia_curand_cu12-10.3.9.90-py3-none-win_amd64.whl", hash = "sha256:f149a8ca457277da854f89cf282d6ef43176861926c7ac85b2a0fbd237c587ec", size = 62765309, upload-time = "2025-03-07T01:54:20.478Z" },
 ]
 
 [[package]]
@@ -1209,13 +1352,14 @@ name = "nvidia-cusolver"
 version = "12.0.4.66"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas" },
-    { name = "nvidia-cusparse" },
-    { name = "nvidia-nvjitlink" },
+    { name = "nvidia-cublas", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparse", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/c3/b30c9e935fc01e3da443ec0116ed1b2a009bb867f5324d3f2d7e533e776b/nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:02c2457eaa9e39de20f880f4bd8820e6a1cfb9f9a34f820eb12a155aa5bc92d2", size = 223467760, upload-time = "2025-09-04T08:33:04.222Z" },
     { url = "https://files.pythonhosted.org/packages/5f/67/cba3777620cdacb99102da4042883709c41c709f4b6323c10781a9c3aa34/nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:0a759da5dea5c0ea10fd307de75cdeb59e7ea4fcb8add0924859b944babf1112", size = 200941980, upload-time = "2025-09-04T08:33:22.767Z" },
+    { url = "https://files.pythonhosted.org/packages/99/ef/332a0101260ca78a1daef046bf0b06199e8ed4dac1d2aa698289c358169c/nvidia_cusolver-12.0.4.66-py3-none-win_amd64.whl", hash = "sha256:16515bd33a8e76bb54d024cfa068fa68d30e80fc34b9e1090813ea9362e0cb65", size = 193551444, upload-time = "2025-09-04T08:41:46.813Z" },
 ]
 
 [[package]]
@@ -1223,12 +1367,14 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
-    { name = "nvidia-cusparse-cu12" },
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparse-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
     { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
+    { url = "https://files.pythonhosted.org/packages/13/c0/76ca8551b8a84146ffa189fec81c26d04adba4bc0dbe09cd6e6fd9b7de04/nvidia_cusolver_cu12-11.7.3.90-py3-none-win_amd64.whl", hash = "sha256:4a550db115fcabc4d495eb7d39ac8b58d4ab5d8e63274d3754df1c0ad6a22d34", size = 256720438, upload-time = "2025-03-07T01:54:39.898Z" },
 ]
 
 [[package]]
@@ -1236,11 +1382,12 @@ name = "nvidia-cusparse"
 version = "12.6.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink" },
+    { name = "nvidia-nvjitlink", marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/94/5c26f33738ae35276672f12615a64bd008ed5be6d1ebcb23579285d960a9/nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:80bcc4662f23f1054ee334a15c72b8940402975e0eab63178fc7e670aa59472c", size = 162155568, upload-time = "2025-09-04T08:33:42.864Z" },
     { url = "https://files.pythonhosted.org/packages/fa/18/623c77619c31d62efd55302939756966f3ecc8d724a14dab2b75f1508850/nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:2b3c89c88d01ee0e477cb7f82ef60a11a4bcd57b6b87c33f789350b59759360b", size = 145942937, upload-time = "2025-09-04T08:33:58.029Z" },
+    { url = "https://files.pythonhosted.org/packages/02/b0/b043d6f3480f102f885cf87fc3ffd3edcb5e23b855025a50e2ef4d059185/nvidia_cusparse-12.6.3.3-py3-none-win_amd64.whl", hash = "sha256:cbcf42feb737bd7ec15b4c0a63e62351886bd3f975027b8815d7f720a2b5ea79", size = 143783033, upload-time = "2025-09-04T08:42:12.391Z" },
 ]
 
 [[package]]
@@ -1248,10 +1395,12 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
     { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },
+    { url = "https://files.pythonhosted.org/packages/62/07/f3b2ad63f8e3d257a599f422ae34eb565e70c41031aecefa3d18b62cabd1/nvidia_cusparse_cu12-12.5.8.93-py3-none-win_amd64.whl", hash = "sha256:9a33604331cb2cac199f2e7f5104dfbb8a5a898c367a53dfda9ff2acb6b6b4dd", size = 284937404, upload-time = "2025-03-07T01:55:07.742Z" },
 ]
 
 [[package]]
@@ -1259,7 +1408,9 @@ name = "nvidia-cusparselt-cu12"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/73/b9/598f6ff36faaece4b3c50d26f50e38661499ff34346f00e057760b35cc9d/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:8878dce784d0fac90131b6817b607e803c36e629ba34dc5b433471382196b6a5", size = 283835557, upload-time = "2025-02-26T00:16:54.265Z" },
     { url = "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623", size = 287193691, upload-time = "2025-02-26T00:15:44.104Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/d8/a6b0d0d0c2435e9310f3e2bb0d9c9dd4c33daef86aa5f30b3681defd37ea/nvidia_cusparselt_cu12-0.7.1-py3-none-win_amd64.whl", hash = "sha256:f67fbb5831940ec829c9117b7f33807db9f9678dc2a617fbe781cac17b4e1075", size = 271020911, upload-time = "2025-02-26T00:14:47.204Z" },
 ]
 
 [[package]]
@@ -1269,6 +1420,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/e1/cdc1797eadf82d3a9a575a19b33fdc871a97edbec42c00b5b5e914f4aff4/nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:4dca476c50bf4780d46cd0bfbd82e2bc10a08e4fef7950917ce8d7578d22a23f", size = 221051344, upload-time = "2025-09-05T18:49:51.289Z" },
     { url = "https://files.pythonhosted.org/packages/34/7d/2661f2fb3ac4302f3a246f5fc030213ac60c1fe0bce84f9783dbd831dbb7/nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:786ce87568c303fadb5afcc7102d454cd3040d75f6f8626f5db460d1871f4dd0", size = 170148586, upload-time = "2025-09-05T18:50:50.248Z" },
+    { url = "https://files.pythonhosted.org/packages/31/83/f3647ce26916c94a6ca4ff1810623e2c405cff2dea6e78d29516b2514df9/nvidia_cusparselt_cu13-0.8.1-py3-none-win_amd64.whl", hash = "sha256:dccbd362f91a7b9024d1f55ee9f548ac065027ff15d8c8b0db889ab3a8f31215", size = 156885108, upload-time = "2025-09-05T18:51:35.958Z" },
 ]
 
 [[package]]
@@ -1285,6 +1437,7 @@ name = "nvidia-nccl-cu12"
 version = "2.27.3"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/4b/7b/8354b784cf73b0ba51e566b4baba3ddd44fe8288a3d39ef1e06cd5417226/nvidia_nccl_cu12-2.27.3-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9ddf1a245abc36c550870f26d537a9b6087fb2e2e3d6e0ef03374c6fd19d984f", size = 322397768, upload-time = "2025-06-03T21:57:30.234Z" },
     { url = "https://files.pythonhosted.org/packages/5c/5b/4e4fff7bad39adf89f735f2bc87248c81db71205b62bcc0d5ca5b606b3c3/nvidia_nccl_cu12-2.27.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adf27ccf4238253e0b826bce3ff5fa532d65fc42322c8bfdfaf28024c0fbe039", size = 322364134, upload-time = "2025-06-03T21:58:04.013Z" },
 ]
 
@@ -1304,6 +1457,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/ee/580ca6f29dcab0221db8706badca1bbbb084f1975c4d4e83329c3a7e31f0/nvidia_nvjitlink-13.3.33-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:26a6de7fb4c8fdaa7703d3dad720d6d427ddfea5c48a528fd97c11733ad830e5", size = 40742423, upload-time = "2026-05-26T16:54:51.613Z" },
     { url = "https://files.pythonhosted.org/packages/69/30/45414e35ff2eee7db3da037e5707037ccf9d2b5218ffbdb055ea4d5aa98a/nvidia_nvjitlink-13.3.33-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:ce48b37dfeb3cb1eae4cf85adacb47d7a6539ea2272870c9a3628ce275c2037e", size = 39168635, upload-time = "2026-05-26T16:54:13.906Z" },
+    { url = "https://files.pythonhosted.org/packages/67/f2/ec9c05a108095828dfc58840978c627b3c313fdf2a567c6de9ffbbb46901/nvidia_nvjitlink-13.3.33-py3-none-win_amd64.whl", hash = "sha256:4297ee49639b4f2e07255a1d69b3acc7ab2d011bb892b403e91ac98368962e3b", size = 37766359, upload-time = "2026-05-26T17:11:28.96Z" },
 ]
 
 [[package]]
@@ -1312,6 +1466,8 @@ version = "12.8.93"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88", size = 39254836, upload-time = "2025-03-07T01:49:55.661Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/a2/8cee5da30d13430e87bf99bb33455d2724d0a4a9cb5d7926d80ccb96d008/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:adccd7161ace7261e01bb91e44e88da350895c270d23f744f0820c818b7229e7", size = 38386204, upload-time = "2025-03-07T01:49:43.612Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/d7/34f02dad2e30c31b10a51f6b04e025e5dd60e5f936af9045a9b858a05383/nvidia_nvjitlink_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:bd93fbeeee850917903583587f4fc3a4eafa022e34572251368238ab5e6bd67f", size = 268553710, upload-time = "2025-03-07T01:56:24.13Z" },
 ]
 
 [[package]]
@@ -1330,6 +1486,7 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f3/d86c845465a2723ad7e1e5c36dcd75ddb82898b3f53be47ebd429fb2fa5d/nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:4936d1d6780fbe68db454f5e72a42ff64d1fd6397df9f363ae786930fd5c1cd4", size = 148047, upload-time = "2025-09-04T08:29:01.761Z" },
     { url = "https://files.pythonhosted.org/packages/a8/64/3708a90d1ebe202ffdeb7185f878a3c84d15c2b2c31858da2ce0583e2def/nvidia_nvtx-13.0.85-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cb7780edb6b14107373c835bf8b72e7a178bac7367e23da7acb108f973f157a6", size = 148878, upload-time = "2025-09-04T08:28:53.627Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/50/0e2220f8620a177de994211186ffc5bfa9f2ce1e1282797f8f90096f9f88/nvidia_nvtx-13.0.85-py3-none-win_amd64.whl", hash = "sha256:d66ea44254dd3c6eacc300047af6e1288d2269dd072b417e0adffbf479e18519", size = 137066, upload-time = "2025-09-04T08:39:25.649Z" },
 ]
 
 [[package]]
@@ -1337,7 +1494,104 @@ name = "nvidia-nvtx-cu12"
 version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/c0/1b303feea90d296f6176f32a2a70b5ef230f9bdeb3a72bddb0dc922dc137/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d7ad891da111ebafbf7e015d34879f7112832fc239ff0d7d776b6cb685274615", size = 91161, upload-time = "2025-03-07T01:42:23.922Z" },
     { url = "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f", size = 89954, upload-time = "2025-03-07T01:42:44.131Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/99/4c9c0c329bf9fc125008c3b54c7c94c0023518d06fc025ae36431375e1fe/nvidia_nvtx_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:619c8304aedc69f02ea82dd244541a83c3d9d40993381b3b590f1adaed3db41e", size = 56492, upload-time = "2025-03-07T01:52:24.69Z" },
+]
+
+[[package]]
+name = "oneccl"
+version = "2021.15.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "impi-rt", marker = "(sys_platform != 'darwin' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "intel-sycl-rt", marker = "(sys_platform != 'darwin' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/42/f701593294e649d6c1c8e90d9582fc29aafbcf89cbd33174417cbfd1078f/oneccl-2021.15.2-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:025b7aacd6f01db9815f27cdec4016a4b59d9e6a99d25c34cd9d961978ecd0bd", size = 97437686, upload-time = "2025-05-15T08:34:38.855Z" },
+]
+
+[[package]]
+name = "oneccl-devel"
+version = "2021.15.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oneccl", marker = "(sys_platform != 'darwin' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/7f/d45a39bfb79561a366b6fe4d46ea43ba9cd0823122c1a6b64b8f34580ea2/oneccl_devel-2021.15.2-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:4d87bd3583438f40f6f3011627ad9f40de0498573a35ec81913ea54095b7e9e1", size = 34863035, upload-time = "2025-05-15T08:34:48.669Z" },
+]
+
+[[package]]
+name = "onemkl-sycl-blas"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/30/1d96ff9326ea3cfd988034266b79a82a211543407335fa8a176f20cfcb86/onemkl_sycl_blas-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:6d445181651b4c9b7a62db3043df007e251622203b359d72a8a2037b08e14f75", size = 22213112, upload-time = "2025-03-21T15:24:04.163Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/bc/895b9f35946ac961ab31897124c21c7bb0d30cee14b256b9826aa2d53df3/onemkl_sycl_blas-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:cf120244f9e187d98d3cf4d28d73dc3d3749188fb71c8fd73a50f8f114a65663", size = 15859786, upload-time = "2025-03-21T15:24:57.447Z" },
+]
+
+[[package]]
+name = "onemkl-sycl-dft"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/2b/4450e4523d1d5fd01205058979b0ca3110cdfe7e703dd67c55ca52e0101e/onemkl_sycl_dft-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:14e6eef173fcec2c7cb111ca07590532375e534985d9476265c8481c874af105", size = 7126870, upload-time = "2025-03-21T15:23:47.769Z" },
+    { url = "https://files.pythonhosted.org/packages/85/94/8ceeca84d92e871a2817e3ffda078c309df245707060ef2e0e1ff65bcd5d/onemkl_sycl_dft-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:f49f4d6d80d50ab4b0ab23bf69193ba55d3a695bfe0edd9c74713f699f7e29c9", size = 6295227, upload-time = "2025-03-21T15:24:54.068Z" },
+]
+
+[[package]]
+name = "onemkl-sycl-lapack"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-blas", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/ed/f178893aea01f5b5ece2eb3d36b1616bc9350b5ffb18907db29024771708/onemkl_sycl_lapack-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:74f976ebd6a32140e5b27144c825d2e5585d5ba91f0dcac50476d78a1bdc0c81", size = 13011330, upload-time = "2025-03-21T15:23:03.884Z" },
+    { url = "https://files.pythonhosted.org/packages/70/04/aa936f1455a4b1ede537f2076412d483ba182b6eeb08a074dc6f59862b56/onemkl_sycl_lapack-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:55862fc6bd2b91b489dee32c10f01caa3f26ccaf735d3dc4f8c7c6bae90e9d42", size = 10439410, upload-time = "2025-03-21T15:25:39.563Z" },
+]
+
+[[package]]
+name = "onemkl-sycl-rng"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/e1/ec3faf77f7c058b8ce89a2b3240fdbf6ef16d0a4a45a0097805f99d86be6/onemkl_sycl_rng-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:19669e714d74b21b2b2b07e2fd25b144b9f9fedba1da94922e8a4f64d9e1f53e", size = 25294801, upload-time = "2025-03-21T15:23:00.063Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/e8/3f86a65d956882b201a8012203b06998e0116dfe1e6b91354f9cdb1a55ff/onemkl_sycl_rng-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:72933d4d955e0d83e6a36e882370c480e5cb79d1f700e3c3144522e181f142dd", size = 16384320, upload-time = "2025-03-21T15:24:50.595Z" },
+]
+
+[[package]]
+name = "onemkl-sycl-sparse"
+version = "2025.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-blas", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/a8/5d423def72174e476112ab2aecfd11a5efe86eab302aa9eea1f4eff6916a/onemkl_sycl_sparse-2025.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:d2e81d57f472977d89f9e4f2be093c048ae4ea35b8acee96b8656e1d4cedbe39", size = 22901713, upload-time = "2025-03-21T15:23:17.393Z" },
+    { url = "https://files.pythonhosted.org/packages/08/38/07b691fdab35029598ec9e63dea9a69cf025cb87a7c7625ddea899240e2f/onemkl_sycl_sparse-2025.1.0-py2.py3-none-win_amd64.whl", hash = "sha256:fc28616c8109bdf7fd748f753a0a6d9718afa06f8561cd705e3038015e10c7b4", size = 17987274, upload-time = "2025-03-21T15:25:46.96Z" },
 ]
 
 [[package]]
@@ -1505,7 +1759,7 @@ resolution-markers = [
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "polars-runtime-32", version = "1.36.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "polars-runtime-32", version = "1.36.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/dc/56f2a90c79a2cb13f9e956eab6385effe54216ae7a2068b3a6406bae4345/polars-1.36.1.tar.gz", hash = "sha256:12c7616a2305559144711ab73eaa18814f7aa898c522e7645014b68f1432d54c", size = 711993, upload-time = "2025-12-10T01:14:53.033Z" }
 wheels = [
@@ -1531,7 +1785,7 @@ resolution-markers = [
     "python_full_version == '3.10.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "polars-runtime-32", version = "1.44.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "polars-runtime-32", version = "1.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/73/258a1fe17bb2744a507199566ed712663144fdd0811b615b59a47dfa38d2/polars-1.44.1.tar.gz", hash = "sha256:ef3c89e9ebbbe8eb343c06873f1945683f8b6f97a1bdf001c60551c6c5e3cda1", size = 765660, upload-time = "2026-08-26T07:09:12.704Z" }
 wheels = [
@@ -1627,6 +1881,26 @@ wheels = [
 ]
 
 [[package]]
+name = "pytorch-triton-xpu"
+version = "3.4.0"
+source = { registry = "https://download.pytorch.org/whl/xpu" }
+dependencies = [
+    { name = "importlib-metadata", marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "82.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:999fef4c1f711092b9d3086525920545df490de476ecebe899ffc777019ae17f", upload-time = "2025-08-05T21:10:50Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp310-cp310-win_amd64.whl", hash = "sha256:ae573d255b257fdbed319a3440dc9d0a721e31160ab7f6eba1b2226e6a409a1d", upload-time = "2025-08-05T21:10:50Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:57b09c8c492985ff6a27cd3a22b08e8f7b96b407bd8030967b6efbb9f63b80cf", upload-time = "2025-08-05T21:10:50Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp311-cp311-win_amd64.whl", hash = "sha256:8e0ea4558e5776d8ddab0264310be9b26aee5641bcac0da023537556d4317b86", upload-time = "2025-08-05T21:10:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:df4bb3282bac9a3b90231700077110d8680b338416de03c2b7c6133c9b602649", upload-time = "2025-08-05T21:10:56Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:4090dde07a4fffc34aaf855701a9db28e9fccb57b368ade520f1a0f8e811c878", upload-time = "2025-08-05T21:11:03Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ac4d8e33986b1c3c5e48151640539272b2187e83016985853111b46fb82c3c94", upload-time = "2025-08-05T21:11:16Z" },
+    { url = "https://download-r2.pytorch.org/whl/pytorch_triton_xpu-3.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:64aea8de349f3e2e0ebf4c24b011a8122531fdffda5776edaef45829cc241cf8", upload-time = "2025-08-05T21:11:20Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1683,10 +1957,10 @@ resolution-markers = [
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "idna" },
-    { name = "urllib3", version = "2.6.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "certifi", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "charset-normalizer", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "idna", marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "urllib3", version = "2.6.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf", size = 134517, upload-time = "2025-08-18T20:46:02.573Z" }
 wheels = [
@@ -1712,10 +1986,10 @@ resolution-markers = [
     "python_full_version == '3.10.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "idna" },
-    { name = "urllib3", version = "2.7.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "certifi", marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "charset-normalizer", marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "idna", marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "urllib3", version = "2.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
@@ -1727,7 +2001,11 @@ name = "setuptools"
 version = "82.0.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "python_full_version < '3.10' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
     "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4f/db/cfac1baf10650ab4d1c111714410d2fbb77ac5a616db26775db562c8fab2/setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9", size = 1152316, upload-time = "2026-03-09T12:47:17.221Z" }
 wheels = [
@@ -1779,6 +2057,27 @@ wheels = [
 ]
 
 [[package]]
+name = "tbb"
+version = "2022.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tcmlib", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c6/64/3d24181aaea3fb892d4a46f8171845782ee364d60e9494426daf31d12f47/tbb-2022.1.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:4992a3f2268b33f9a7b4c274af9d7001f550e74246436647b267d58e4947628a", size = 3614726, upload-time = "2025-03-21T15:26:50.39Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/e5/09786318a0fcd5a9b9589759ec91fe1815db064ab6bb6d4083ea24dbb859/tbb-2022.1.0-py3-none-win_amd64.whl", hash = "sha256:ae9cc327606f604324441abf3ab984c12ea4f6f1ea2a84230874fc40036d0913", size = 299568, upload-time = "2025-03-21T15:28:27.22Z" },
+]
+
+[[package]]
+name = "tcmlib"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/bb/09a6dc2f1110b409d6d2f96429969d7466bde9bf4ad8b2e682d851ef104b/tcmlib-1.3.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:c328ba464c556e46174879c694cafd17ba17c3e7406a79fee47bb3e8c9c6a6c5", size = 4158009, upload-time = "2025-03-21T15:29:35.675Z" },
+    { url = "https://files.pythonhosted.org/packages/07/d2/11754d24c4ee4a78e11da4fd34ccdc948261b359e525ee74fc9aae485fd0/tcmlib-1.3.0-py2.py3-none-win_amd64.whl", hash = "sha256:878c9ce2ae5705da3964b7d00ff721c0c61b23a0aa93960629b2119c2921a1e2", size = 356902, upload-time = "2025-03-21T15:24:46.837Z" },
+]
+
+[[package]]
 name = "torch"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1790,27 +2089,27 @@ resolution-markers = [
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "jinja2" },
-    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cudnn-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cufile-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparselt-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "sympy" },
-    { name = "triton", version = "3.4.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "typing-extensions" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "jinja2", marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cublas-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cudnn-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cufft-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cufile-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-curand-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusolver-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparse-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparselt-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nccl-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvtx-cu12", marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "sympy", marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "triton", version = "3.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/28/110f7274254f1b8476c561dada127173f994afa2b1ffc044efb773c15650/torch-2.8.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:0be92c08b44009d4131d1ff7a8060d10bafdb7ddcb7359ef8d8c5169007ea905", size = 102052793, upload-time = "2025-08-06T14:53:15.852Z" },
@@ -1833,6 +2132,136 @@ wheels = [
 
 [[package]]
 name = "torch"
+version = "2.8.0+cu128"
+source = { registry = "https://download.pytorch.org/whl/cu128" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2026.7.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "jinja2", marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cudnn-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cufft-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cufile-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-curand-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusolver-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparselt-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nccl-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvtx-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "sympy", marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "triton", version = "3.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "typing-extensions", marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:0c96999d15cf1f13dd7c913e0b21a9a355538e6cfc10861a17158320292f5954", upload-time = "2025-10-01T23:47:19Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp310-cp310-win_amd64.whl", hash = "sha256:43938e9a174c90e5eb9e906532b2f1e21532bbfa5a61b65193b4f54714d34f9e", upload-time = "2025-10-01T23:47:42Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:039b9dcdd6bdbaa10a8a5cd6be22c4cb3e3589a341e5f904cbb571ca28f55bed", upload-time = "2025-10-01T23:49:06Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp311-cp311-win_amd64.whl", hash = "sha256:34c55443aafd31046a7963b63d30bc3b628ee4a704f826796c865fdfd05bb596", upload-time = "2025-10-01T23:49:30Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:4354fc05bb79b208d6995a04ca1ceef6a9547b1c4334435574353d381c55087c", upload-time = "2025-10-01T23:51:02Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp312-cp312-win_amd64.whl", hash = "sha256:0ad925202387f4e7314302a1b4f8860fa824357f9b1466d7992bf276370ebcff", upload-time = "2025-10-01T23:51:26Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:b9357a87595a3d7b2a565ba602b97392a37c56f0b85698f0ccf0a2c58fbef5ec", upload-time = "2025-10-01T23:57:13Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torch-2.8.0%2Bcu128-cp39-cp39-win_amd64.whl", hash = "sha256:fca71fd04bf524a54370386b85e2e89840c2bbc86dc2a8df2aadedd3bba5645f", upload-time = "2025-10-01T23:57:41Z" },
+]
+
+[[package]]
+name = "torch"
+version = "2.8.0+xpu"
+source = { registry = "https://download.pytorch.org/whl/xpu" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "dpcpp-cpp-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2026.7.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "impi-rt", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "intel-cmplr-lib-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-cmplr-lib-ur", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-cmplr-lic-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-opencl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-openmp", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-pti", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "intel-sycl-rt", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "jinja2", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "mkl", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "oneccl", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "oneccl-devel", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (platform_machine != 'x86_64' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform != 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "onemkl-sycl-blas", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-dft", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-lapack", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-rng", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "onemkl-sycl-sparse", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "pytorch-triton-xpu", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "sympy", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "tbb", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "tcmlib", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "typing-extensions", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "umf", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp310-cp310-linux_x86_64.whl", hash = "sha256:a339416534262eee12e4d066b09c5513a8910ba5714267b719b89ffa9a056c53", upload-time = "2025-10-02T01:00:32Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp310-cp310-win_amd64.whl", hash = "sha256:125c60cd59d51b39581a7e9afcd4679bc3a6b8c1f9440b1bb502a23fdd60571e", upload-time = "2025-10-02T01:01:00Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp311-cp311-linux_x86_64.whl", hash = "sha256:698131dadbe635f75075842d182c50d7792c0a7d564ed2a63ae2131760b12987", upload-time = "2025-10-02T01:01:44Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp311-cp311-win_amd64.whl", hash = "sha256:47f1a57258cd460e80b38b2ed6744e31587ab77a96b4215bf59546cb4bab5cc0", upload-time = "2025-10-02T01:02:12Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp312-cp312-linux_x86_64.whl", hash = "sha256:e19db8135bde12a4357e5ca09f0176083ba9e70554dd6c90725a19b21690cbad", upload-time = "2025-10-02T01:02:56Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp312-cp312-win_amd64.whl", hash = "sha256:0937d8943c145a83d9bafc6f80ef28971167817f9eda26066d33f72caf8a6646", upload-time = "2025-10-02T01:03:23Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp39-cp39-linux_x86_64.whl", hash = "sha256:d5a4033feb79318862db8e09dce4567db0bb2d050a533b090a3045eb420acb97", upload-time = "2025-10-02T01:06:27Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp39-cp39-win_amd64.whl", hash = "sha256:f2f401276892428e4875cf1d8717c5cbab704b16fc594ccf23795e7b16549a99", upload-time = "2025-10-02T01:06:54Z" },
+]
+
+[[package]]
+name = "torch"
 version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
@@ -1850,21 +2279,21 @@ resolution-markers = [
     "python_full_version == '3.10.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "cuda-bindings", marker = "sys_platform == 'linux'" },
-    { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvjitlink", "nvrtc", "nvtx"], marker = "sys_platform == 'linux'" },
-    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" } },
-    { name = "fsspec", version = "2026.7.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "jinja2" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "nvidia-cudnn-cu13", marker = "sys_platform == 'linux'" },
-    { name = "nvidia-cusparselt-cu13", marker = "sys_platform == 'linux'" },
-    { name = "nvidia-nccl-cu13", marker = "sys_platform == 'linux'" },
-    { name = "nvidia-nvshmem-cu13", marker = "sys_platform == 'linux'" },
-    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "sympy" },
-    { name = "triton", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'linux'" },
-    { name = "typing-extensions" },
+    { name = "cuda-bindings", marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvjitlink", "nvrtc", "nvtx"], marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "fsspec", version = "2026.7.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "jinja2", marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cudnn-cu13", marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-cusparselt-cu13", marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nccl-cu13", marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "nvidia-nvshmem-cu13", marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "sympy", marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "triton", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "typing-extensions", marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/e7/19894fdb51c7dbaf94f5a79bb0871da0992e8e4241e579cb006da46d2e58/torch-2.13.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:94f0de129916f77b8dc2c7a8eff644cfeddfe59e39c9f55e9f6e17543410281d", size = 111178962, upload-time = "2026-07-08T16:05:49.855Z" },
@@ -1893,9 +2322,9 @@ resolution-markers = [
     "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/49/5ad5c3ff4920be0adee9eb4339b4fb3b023a0fc55b9ed8dbc73df92946b8/torchvision-0.23.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:7266871daca00ad46d1c073e55d972179d12a58fa5c9adec9a3db9bbed71284a", size = 1856885, upload-time = "2025-08-06T14:57:55.024Z" },
@@ -1918,6 +2347,86 @@ wheels = [
 
 [[package]]
 name = "torchvision"
+version = "0.23.0+cu128"
+source = { registry = "https://download.pytorch.org/whl/cu128" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "numpy", marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:460bc8d70f63bdb433a7351decc2c1ae1903f7f378e4a7614fc8e8c97a5c36aa", upload-time = "2025-08-05T20:11:51Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp310-cp310-win_amd64.whl", hash = "sha256:8ec6f2281ef5d52471b01b99eb04243d0c2cccb1972ba43217085025fe5a6c3f", upload-time = "2025-08-05T20:11:51Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:93f1b5f56b20cd6869bca40943de4fd3ca9ccc56e1b57f47c671de1cdab39cdb", upload-time = "2025-08-05T20:11:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp311-cp311-win_amd64.whl", hash = "sha256:70b3d8bfe04438006ec880c162b0e3aaac90c48b759aa41638dd714c732b182c", upload-time = "2025-08-05T20:11:51Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:9cb3c13997afcb44057ca10d943c6c4cba3068afde0f370965abce9c89fcffa9", upload-time = "2025-08-05T20:11:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp312-cp312-win_amd64.whl", hash = "sha256:20fa9c7362a006776630b00b8a01919fedcf504a202b81358d32c5aef39956fe", upload-time = "2025-08-05T20:11:51Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:784fc90cb970e5a29b24b6441e461f5bf616846305b9793fa3870a9f296d4c0e", upload-time = "2025-08-05T20:11:52Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu128/torchvision-0.23.0%2Bcu128-cp39-cp39-win_amd64.whl", hash = "sha256:4cbc97e320d229929ec706f98edc926b68dc2fa9fb7785133c6bda2c5d163694", upload-time = "2025-08-05T20:11:52Z" },
+]
+
+[[package]]
+name = "torchvision"
+version = "0.23.0+xpu"
+source = { registry = "https://download.pytorch.org/whl/xpu" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version >= '3.12' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version < '3.10' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "python_full_version == '3.10.*' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+dependencies = [
+    { name = "numpy", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:e5ba4805969277175ebfd59cc717093528cc6e3ada89ac2725fc7a3c1fee6169", upload-time = "2025-08-05T20:11:59Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp310-cp310-win_amd64.whl", hash = "sha256:005fca5e658ca8e37adb63c1a021c84f5e56dfa6cf0d601d89cfe40b9473f79f", upload-time = "2025-08-05T20:11:59Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:74c39c144104416bc4c5ad8c26ab0c169dc5cc6be58059e01bc3665dd0ef676f", upload-time = "2025-08-05T20:11:59Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp311-cp311-win_amd64.whl", hash = "sha256:c6d030f5361461550c0ff1339b5bca8585fc1e84fda2e64b6184e65a581e4f98", upload-time = "2025-08-05T20:11:59Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0acec355b80c3899841184084f365df336c508602812e34a44007b8b60d53af4", upload-time = "2025-08-05T20:12:00Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp312-cp312-win_amd64.whl", hash = "sha256:91aafd61864cdce27461cbec13ddbf28c1bc6494265a1e4b80131c64a3b7d18f", upload-time = "2025-08-05T20:12:00Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:6e981c192045fc249c008441179ff237bb00174d818b875b0475730b63f0eaca", upload-time = "2025-08-05T20:12:00Z" },
+    { url = "https://download-r2.pytorch.org/whl/xpu/torchvision-0.23.0%2Bxpu-cp39-cp39-win_amd64.whl", hash = "sha256:5f7904e7048d414379bc8c1167260f1e84204f105db2d0a2f9c89e87ce1cf205", upload-time = "2025-08-05T20:12:00Z" },
+]
+
+[[package]]
+name = "torchvision"
 version = "0.28.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
@@ -1935,9 +2444,9 @@ resolution-markers = [
     "python_full_version == '3.10.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
-    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/df/1ba039ad6cfe6e69209c36766b9b6e8c6fe92481c6d4e4ca52296f5f699d/torchvision-0.28.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:2a1ef4b6f4bf5828b48cfad97372c8982db906830884b2868ba5c3df937a7d81", size = 1856019, upload-time = "2026-07-08T16:07:59.283Z" },
@@ -1959,11 +2468,15 @@ name = "triton"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "(python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "(python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
+    "(python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
     "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32')",
 ]
 dependencies = [
-    { name = "importlib-metadata" },
-    { name = "setuptools", version = "82.0.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "importlib-metadata", marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "82.0.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version >= '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "setuptools", version = "84.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda') or (python_full_version < '3.10' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'darwin' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu') or (sys_platform == 'win32' and extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/ee/0ee5f64a87eeda19bbad9bc54ae5ca5b98186ed00055281fd40fb4beb10e/triton-3.4.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7ff2785de9bc02f500e085420273bb5cc9c9bb767584a4aa28d6e360cec70128", size = 155430069, upload-time = "2025-07-30T19:58:21.715Z" },
@@ -2007,25 +2520,29 @@ name = "ultralytics"
 version = "8.4.138"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "filelock", version = "3.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "nvidia-ml-py" },
     { name = "opencv-python" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "polars", version = "1.36.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "polars", version = "1.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "pillow", version = "12.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "polars", version = "1.36.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "polars", version = "1.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "psutil" },
     { name = "pyyaml" },
-    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "requests", version = "2.34.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "torchvision", version = "0.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "torchvision", version = "0.28.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "ultralytics-platform", marker = "python_full_version >= '3.11'" },
+    { name = "requests", version = "2.32.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "requests", version = "2.34.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "torch", version = "2.8.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torchvision", version = "0.23.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torchvision", version = "0.23.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "torchvision", version = "0.23.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "torchvision", version = "0.28.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "ultralytics-platform", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
     { name = "ultralytics-thop" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/a5/d8ad681bb4740c5e7dd5aff452add8877fa8237cb1b274a86af9542a0f9b/ultralytics-8.4.138.tar.gz", hash = "sha256:4583b4cf3c2eeb2d83b54c206cb1ebaf9d8454e8e51a7d40ac7d8fa61e249d92", size = 1224480, upload-time = "2026-09-01T23:02:24.425Z" }
@@ -2038,7 +2555,7 @@ name = "ultralytics-platform"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "httpx" },
+    { name = "httpx", marker = "python_full_version >= '3.11' or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/61/881fdc4bbe5fe7277278d814531aff51dec9431388c6fd7b8a753b1b5def/ultralytics_platform-0.1.21.tar.gz", hash = "sha256:d408a2274800b51cca543aef21e96f6405c022df3d6c81dc4559375980c4eed1", size = 54878, upload-time = "2026-09-01T00:46:18.25Z" }
 wheels = [
@@ -2051,8 +2568,10 @@ version = "2.1.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
-    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
+    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-cuda'" },
+    { name = "torch", version = "2.8.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra != 'extra-30-ultrasonic-directional-speaker-cuda' and extra != 'extra-30-ultrasonic-directional-speaker-xpu') or (extra == 'extra-30-ultrasonic-directional-speaker-cuda' and extra == 'extra-30-ultrasonic-directional-speaker-xpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/45/20/d6b6aaa8ecf7dbdeaf0c05f73bdcd04cf8ce468d936bc48dbcd368e75baf/ultralytics_thop-2.1.6.tar.gz", hash = "sha256:0ec2df8ebd3db35795e1f80cdc8bce6734446dbe989bca1b0c89396353f0f08c", size = 36364, upload-time = "2026-07-30T22:31:28.143Z" }
 wheels = [
@@ -2070,12 +2589,41 @@ dependencies = [
     { name = "ultralytics" },
 ]
 
+[package.optional-dependencies]
+cuda = [
+    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" } },
+    { name = "torchvision", version = "0.23.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" } },
+]
+xpu = [
+    { name = "pytorch-triton-xpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { name = "torch", version = "2.8.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" } },
+    { name = "torchvision", version = "0.23.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" } },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "lap", specifier = ">=0.5.12" },
     { name = "matplotlib", specifier = "==3.9.4" },
     { name = "numpy", specifier = "==1.26.4" },
+    { name = "pytorch-triton-xpu", marker = "(sys_platform == 'linux' and extra == 'xpu') or (sys_platform == 'win32' and extra == 'xpu')", specifier = "==3.4.0", index = "https://download.pytorch.org/whl/xpu", conflict = { package = "ultrasonic-directional-speaker", extra = "xpu" } },
+    { name = "torch", marker = "extra == 'cuda'", specifier = "==2.8.0", index = "https://download.pytorch.org/whl/cu128", conflict = { package = "ultrasonic-directional-speaker", extra = "cuda" } },
+    { name = "torch", marker = "extra == 'xpu'", specifier = "==2.8.0", index = "https://download.pytorch.org/whl/xpu", conflict = { package = "ultrasonic-directional-speaker", extra = "xpu" } },
+    { name = "torchvision", marker = "extra == 'cuda'", specifier = "==0.23.0", index = "https://download.pytorch.org/whl/cu128", conflict = { package = "ultrasonic-directional-speaker", extra = "cuda" } },
+    { name = "torchvision", marker = "extra == 'xpu'", specifier = "==0.23.0", index = "https://download.pytorch.org/whl/xpu", conflict = { package = "ultrasonic-directional-speaker", extra = "xpu" } },
     { name = "ultralytics", specifier = "==8.4.138" },
+]
+provides-extras = ["cuda", "xpu"]
+
+[[package]]
+name = "umf"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tcmlib", marker = "extra == 'extra-30-ultrasonic-directional-speaker-xpu'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/a4/1d289b37333a7c9a54d590d04a4d83aefa0e3d1ab1ad98e592d22080347a/umf-0.10.0-py2.py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:a27a368c614fd9d0e67e9ef77de391a7080697d7a4d51b9035707f629d81dc7c", size = 314530, upload-time = "2025-03-21T15:26:41.295Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/27/0baa776232aac436568b3ad8ab1d906c383ed0956a9052f374e88f33e6a8/umf-0.10.0-py2.py3-none-win_amd64.whl", hash = "sha256:7b3ee402f1a5bbe418d661970338f75b25a441cb59bb084dca916040f5c3c303", size = 193945, upload-time = "2025-03-21T15:28:59.666Z" },
 ]
 
 [[package]]

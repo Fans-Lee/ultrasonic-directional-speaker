@@ -3,6 +3,7 @@
 from typing import Any, List, Protocol, Sequence
 
 import numpy as np
+import torch
 from ultralytics import YOLO
 
 if __package__:
@@ -26,6 +27,18 @@ def _to_numpy(value):
     if hasattr(value, "numpy"):
         value = value.numpy()
     return np.asarray(value)
+
+
+def resolve_inference_device(requested_device: str = "auto") -> str:
+    """自动选择 CUDA/XPU；没有可用 GPU 时安全回退到 CPU。"""
+    device = str(requested_device).strip().lower()
+    if device not in {"", "auto"}:
+        return device
+    if torch.cuda.is_available():
+        return "cuda:0"
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return "xpu:0"
+    return "cpu"
 
 
 def suppress_duplicate_people(
@@ -62,6 +75,7 @@ class UltralyticsMultiPersonTracker:
         nms_iou_threshold: float = 0.60,
         duplicate_iou_threshold: float = 0.70,
         duplicate_containment_threshold: float = 0.90,
+        device: str = "auto",
         classes: Sequence[int] = (0,),
         model: Any = None,
     ):
@@ -80,6 +94,7 @@ class UltralyticsMultiPersonTracker:
         self.nms_iou_threshold = nms_iou_threshold
         self.duplicate_iou_threshold = duplicate_iou_threshold
         self.duplicate_containment_threshold = duplicate_containment_threshold
+        self.device = resolve_inference_device(device)
         self.classes = tuple(classes)
 
     def update(self, frame: np.ndarray) -> List[TrackedPerson]:
@@ -91,6 +106,7 @@ class UltralyticsMultiPersonTracker:
             conf=self.confidence,
             iou=self.nms_iou_threshold,
             imgsz=self.image_size,
+            device=self.device,
             verbose=False,
         )
         if not results:
