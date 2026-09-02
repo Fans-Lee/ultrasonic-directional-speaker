@@ -1,38 +1,33 @@
-import cv2
-from ultralytics import YOLO
+"""主程序：注册多人物跟踪配置并启动应用。"""
 
-CAMERA_INDEX = 1       # 外接摄像头常见为1，但不能永久写死
-CAMERA_ROTATION = 180  # 当前摄像头物理反装
+from pathlib import Path
 
-cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-cap.set(cv2.CAP_PROP_FPS, 30)
+if __package__:
+    from .yolo_tracking_app import TrackingConfig, run_person_tracking
+else:
+    from yolo_tracking_app import TrackingConfig, run_person_tracking
 
-model = YOLO("yolo26n.pt")
 
-while True:
-    ok, frame = cap.read()
-    if not ok or frame is None:
-        break
+def main():
+    project_root = Path(__file__).resolve().parents[2]
+    config = TrackingConfig(
+        camera_index=0,       # 外接摄像头常见为 1，请按实际设备修改
+        camera_rotation=0,    # 摄像头物理反装时设为 180
+        frame_width=1280,
+        frame_height=720,
+        camera_fps=30,
+        model_path=str(project_root / "yolo26n.pt"),
+        tracker_config_path=str(
+            Path(__file__).resolve().parent
+            / "configs"
+            / "bytetrack_person.yaml"
+        ),
+        confidence=0.10,      # 保留低置信度检测供 ByteTrack 二次关联
+        image_size=512,
+        max_prediction_frames=30,
+    )
+    run_person_tracking(config)
 
-    # 必须在YOLO之前校正方向
-    if CAMERA_ROTATION == 180:
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
 
-    result = model.predict(
-        frame,
-        classes=[0],
-        conf=0.45,
-        imgsz=512,
-        verbose=False,
-    )[0]
-
-    annotated = result.plot()
-    cv2.imshow("person tracking", annotated)
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()
