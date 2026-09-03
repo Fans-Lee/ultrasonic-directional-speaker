@@ -32,6 +32,7 @@ class TrackingConfig:
     prediction_duplicate_iou_threshold: float = 0.55
     prediction_duplicate_containment_threshold: float = 0.85
     max_prediction_frames: int = 12
+    device: str = "auto"
     window_name: str = "multi-person tracking"
 
 
@@ -60,8 +61,10 @@ def run_person_tracking(config):
             nms_iou_threshold=config.nms_iou_threshold,
             duplicate_iou_threshold=config.duplicate_iou_threshold,
             duplicate_containment_threshold=config.duplicate_containment_threshold,
+            device=config.device,
             classes=(0,),
         )
+        print(f"YOLO inference device: {person_tracker.device}")
         aim_smoother = PerTrackAimSmoother(
             config.max_prediction_frames,
             duplicate_iou_threshold=config.prediction_duplicate_iou_threshold,

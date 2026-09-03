@@ -30,6 +30,7 @@ def main():
         prediction_duplicate_iou_threshold=0.55,
         prediction_duplicate_containment_threshold=0.85,
         max_prediction_frames=12,  # 避免旧 ID 的预测框长时间残留
+        device="auto",            # CUDA > Intel XPU > CPU
     )
     run_person_tracking(config)
 
