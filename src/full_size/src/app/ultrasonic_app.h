@@ -7,6 +7,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#include "../driver/gimbal_controller.h"
 #include "../driver/ultrasonic_driver.h"
 #include "../modulation/modulation_engine.h"
 
@@ -59,6 +60,9 @@ class UltrasonicApp final {
   void playbackTask();
   void handleSerial();
   void handleNumericInput();
+  void beginPoseInput();
+  void handlePoseCharacter(char input);
+  void handlePoseInput();
   void printHelp() const;
   bool enqueue(CommandType type, uint32_t value = 0);
 
@@ -86,6 +90,7 @@ class UltrasonicApp final {
   bool applyDriverResult(esp_err_t error, const char* operation);
 
   UltrasonicDriver& driver_;
+  GimbalController gimbal_;
   ModulationEngine modulationEngine_;
   QueueHandle_t commandQueue_ = nullptr;
   TaskHandle_t controlTaskHandle_ = nullptr;
@@ -95,8 +100,13 @@ class UltrasonicApp final {
 
   uint32_t pendingTimerTicks_ = 0;
   uint32_t numericInputValue_ = 0;
+  static constexpr size_t kPoseInputCapacity = 32;
+  char poseInput_[kPoseInputCapacity] = {};
+  size_t poseInputLength_ = 0;
   bool numericInputActive_ = false;
   bool numericInputOverflow_ = false;
+  bool poseInputActive_ = false;
+  bool poseInputOverflow_ = false;
   bool sampleTimerRunning_ = false;
   uint64_t skippedFrameCount_ = 0;
   uint32_t maximumTimerBacklog_ = 0;

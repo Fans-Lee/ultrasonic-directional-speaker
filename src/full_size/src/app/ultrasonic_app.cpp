@@ -14,6 +14,9 @@ constexpr uint32_t kDefaultToneHz = 1000;
 }  // namespace
 
 esp_err_t UltrasonicApp::begin() {
+  esp_err_t error = gimbal_.begin();
+  if (error != ESP_OK) return error;
+
   const DutyConfig dutyConfig = {
       UltrasonicDriver::kPeriodCounts,
       UltrasonicDriver::kHalfDuty,
@@ -28,7 +31,7 @@ esp_err_t UltrasonicApp::begin() {
   timerConfig.direction = GPTIMER_COUNT_UP;
   timerConfig.resolution_hz = kSampleTimerResolutionHz;
 
-  esp_err_t error = gptimer_new_timer(&timerConfig, &sampleTimer_);
+  error = gptimer_new_timer(&timerConfig, &sampleTimer_);
   if (error != ESP_OK) {
     vQueueDelete(commandQueue_);
     commandQueue_ = nullptr;
@@ -86,6 +89,10 @@ esp_err_t UltrasonicApp::begin() {
     return ESP_ERR_NO_MEM;
   }
 
+  // The competition demo starts centered and continuously plays the embedded
+  // audio. Servo commands are handled by the lower-priority control task while
+  // the playback task keeps rendering 8 kHz modulation frames.
+  if (!enqueue(CommandType::kAudioLoop)) return ESP_FAIL;
   return ESP_OK;
 }
 
@@ -150,6 +157,16 @@ void UltrasonicApp::playbackTask() {
 void UltrasonicApp::handleSerial() {
   while (Serial.available() > 0) {
     char input = static_cast<char>(Serial.read());
+
+    if (poseInputActive_) {
+      handlePoseCharacter(input);
+      continue;
+    }
+    if (input == '(') {
+      beginPoseInput();
+      continue;
+    }
+
     if (input >= 'a' && input <= 'z') input -= ('a' - 'A');
 
     if (input >= '0' && input <= '9') {
@@ -233,6 +250,84 @@ void UltrasonicApp::handleSerial() {
   }
 }
 
+void UltrasonicApp::beginPoseInput() {
+  if (numericInputActive_) {
+    Serial.println("NUMBER ERROR: terminate the frequency with Enter");
+    numericInputValue_ = 0;
+    numericInputActive_ = false;
+    numericInputOverflow_ = false;
+  }
+
+  poseInputLength_ = 0;
+  poseInput_[0] = '\0';
+  poseInputActive_ = true;
+  poseInputOverflow_ = false;
+}
+
+void UltrasonicApp::handlePoseCharacter(char input) {
+  if (input == ')') {
+    handlePoseInput();
+    return;
+  }
+
+  if (input == '\r' || input == '\n') {
+    Serial.println("GIMBAL ERROR: close the pair with ')'");
+    poseInputActive_ = false;
+    poseInputLength_ = 0;
+    poseInputOverflow_ = false;
+    return;
+  }
+
+  if (poseInputLength_ + 1 >= kPoseInputCapacity) {
+    poseInputOverflow_ = true;
+    return;
+  }
+
+  poseInput_[poseInputLength_++] = input;
+  poseInput_[poseInputLength_] = '\0';
+}
+
+void UltrasonicApp::handlePoseInput() {
+  poseInputActive_ = false;
+
+  if (poseInputOverflow_) {
+    Serial.println("GIMBAL ERROR: command is too long");
+    poseInputLength_ = 0;
+    poseInputOverflow_ = false;
+    return;
+  }
+
+  long panDegrees = 0;
+  long tiltDegrees = 0;
+  char trailing = '\0';
+  const int parsed = sscanf(poseInput_, " %ld , %ld %c",
+                            &panDegrees, &tiltDegrees, &trailing);
+  poseInputLength_ = 0;
+
+  if (parsed != 2) {
+    Serial.println("GIMBAL ERROR: use (left-right,up-down), e.g. (-10,30)");
+    return;
+  }
+  if (panDegrees < GimbalController::kMinimumAngle ||
+      panDegrees > GimbalController::kMaximumAngle ||
+      tiltDegrees < GimbalController::kMinimumAngle ||
+      tiltDegrees > GimbalController::kMaximumAngle) {
+    Serial.println("GIMBAL ERROR: both angles must be -90..90 degrees");
+    return;
+  }
+
+  const esp_err_t error = gimbal_.setAngles(
+      static_cast<int32_t>(panDegrees),
+      static_cast<int32_t>(tiltDegrees));
+  if (error != ESP_OK) {
+    Serial.printf("GIMBAL ERROR: %s\r\n", esp_err_to_name(error));
+    return;
+  }
+
+  Serial.printf("GIMBAL: pan=%ld deg, tilt=%ld deg\r\n",
+                panDegrees, tiltDegrees);
+}
+
 void UltrasonicApp::handleNumericInput() {
   const uint32_t value = numericInputValue_;
   const bool overflow = numericInputOverflow_;
@@ -278,8 +373,9 @@ void UltrasonicApp::printHelp() const {
   Serial.println("C : reset carrier to 40 kHz; F : report actual carrier");
   Serial.println("P : play embedded audio once");
   Serial.println("L : loop embedded audio");
+  Serial.println("(pan,tilt) : set GPIO6/GPIO5 signed angles, e.g. (-10,30)");
   Serial.println("H : print this help");
-  Serial.println("Power-up default is OFF. Commands are case-insensitive.");
+  Serial.println("Power-up default: gimbal (0,0), embedded audio loops.");
   Serial.println("GPIO4 is copied to 12 TC4428 branches by external buffers.");
   Serial.println("Software stop is not 12 V isolation; disconnect power before rewiring.");
   Serial.println();
