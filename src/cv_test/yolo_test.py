@@ -16,7 +16,7 @@ def main():
         frame_width=1280,
         frame_height=720,
         camera_fps=30,
-        model_path=str(project_root / "yolo26n.pt"),
+        model_path=str(project_root / "yolo26m.pt"),
         tracker_config_path=str(
             Path(__file__).resolve().parent
             / "configs"
