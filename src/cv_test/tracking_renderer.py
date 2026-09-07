@@ -1,6 +1,6 @@
 """多人物轨迹的 OpenCV 可视化。"""
 
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -38,17 +38,23 @@ def _display_bbox(person: TrackedPerson):
 def render_tracks(
     frame: np.ndarray,
     people: Iterable[TrackedPerson],
+    selected_track_id: Optional[int] = None,
+    aim_center: Optional[Tuple[float, float]] = None,
+    control_aim_point: Optional[Tuple[float, float]] = None,
+    status_lines: Sequence[str] = (),
 ) -> np.ndarray:
     """绘制稳定 ID、人物框、原始中心点和滤波后的瞄准点。"""
     annotated = frame.copy()
     for person in people:
-        color = _track_color(person.track_id)
+        selected = person.track_id == selected_track_id
+        color = (0, 255, 255) if selected else _track_color(person.track_id)
         x1, y1, x2, y2 = _display_bbox(person)
-        thickness = 2 if person.observed else 1
+        thickness = 3 if selected else (2 if person.observed else 1)
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness)
 
         state_text = "" if person.observed else " predicted"
-        label = f"ID {person.track_id}{state_text}"
+        target_text = " TARGET" if selected else ""
+        label = f"ID {person.track_id}{target_text}{state_text}"
         label_y = max(y1 - 8, 20)
         cv2.putText(
             annotated,
@@ -76,5 +82,39 @@ def render_tracks(
             cv2.MARKER_CROSS,
             24,
             2,
+        )
+
+    if aim_center is not None:
+        center = tuple(round(value) for value in aim_center)
+        cv2.drawMarker(
+            annotated,
+            center,
+            (0, 0, 255),
+            cv2.MARKER_CROSS,
+            32,
+            2,
+        )
+
+    if control_aim_point is not None:
+        point = tuple(round(value) for value in control_aim_point)
+        cv2.drawMarker(
+            annotated,
+            point,
+            (255, 0, 255),
+            cv2.MARKER_TILTED_CROSS,
+            24,
+            2,
+        )
+
+    for index, line in enumerate(status_lines):
+        cv2.putText(
+            annotated,
+            line,
+            (12, 28 + index * 24),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.58,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA,
         )
     return annotated

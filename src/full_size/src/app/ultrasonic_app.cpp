@@ -92,7 +92,7 @@ esp_err_t UltrasonicApp::begin() {
   // The competition demo starts centered and continuously plays the embedded
   // audio. Servo commands are handled by the lower-priority control task while
   // the playback task keeps rendering 8 kHz modulation frames.
-  if (!enqueue(CommandType::kAudioLoop)) return ESP_FAIL;
+  //if (!enqueue(CommandType::kAudioLoop)) return ESP_FAIL;
   return ESP_OK;
 }
 

@@ -8,18 +8,19 @@ dependencies = [
     "lap>=0.5.12",
     "matplotlib==3.9.4",
     "numpy==1.26.4",
+    "pyserial>=3.5",
     "ultralytics==8.4.138",
 ]
 
 [project.optional-dependencies]
 cuda = [
-    "torch==2.8.0",
-    "torchvision==0.23.0",
+    "torch==2.8.0; sys_platform == 'win32' or sys_platform == 'linux'",
+    "torchvision==0.23.0; sys_platform == 'win32' or sys_platform == 'linux'",
 ]
 xpu = [
     "pytorch-triton-xpu==3.4.0; sys_platform == 'win32' or sys_platform == 'linux'",
-    "torch==2.8.0",
-    "torchvision==0.23.0",
+    "torch==2.8.0; sys_platform == 'win32' or sys_platform == 'linux'",
+    "torchvision==0.23.0; sys_platform == 'win32' or sys_platform == 'linux'",
 ]
 
 [tool.uv]
