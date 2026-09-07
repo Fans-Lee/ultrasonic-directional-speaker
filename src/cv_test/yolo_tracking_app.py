@@ -1,17 +1,25 @@
 """调用程序：组织摄像头、多人跟踪、逐 ID 平滑和结果显示。"""
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Sequence
 
 import cv2
 
 if __package__:
+    from .gimbal_serial import GimbalSerialConfig, create_gimbal_client
     from .multi_person_tracker import UltralyticsMultiPersonTracker
     from .per_track_smoother import PerTrackAimSmoother
+    from .tracking_controller import (
+        TrackingController,
+        TrackingControllerConfig,
+    )
     from .tracking_renderer import render_tracks
 else:
+    from gimbal_serial import GimbalSerialConfig, create_gimbal_client
     from multi_person_tracker import UltralyticsMultiPersonTracker
     from per_track_smoother import PerTrackAimSmoother
+    from tracking_controller import TrackingController, TrackingControllerConfig
     from tracking_renderer import render_tracks
 
 
@@ -34,6 +42,10 @@ class TrackingConfig:
     max_prediction_frames: int = 12
     device: str = "auto"
     window_name: str = "multi-person tracking"
+    control: TrackingControllerConfig = field(
+        default_factory=TrackingControllerConfig
+    )
+    serial: GimbalSerialConfig = field(default_factory=GimbalSerialConfig)
 
 
 def _open_camera(config):
@@ -49,9 +61,32 @@ def _open_camera(config):
     return cap
 
 
+def _control_status_lines(status) -> Sequence[str]:
+    target = "none" if status.target_id is None else str(status.target_id)
+    if not status.serial.enabled:
+        serial_state = "disabled"
+    elif status.serial.connected:
+        serial_state = "connected"
+    else:
+        serial_state = "reconnecting"
+    return (
+        f"target={target} observed={int(status.target_observed)}",
+        (
+            f"error pan={status.pan_error_deg:+.1f} "
+            f"tilt={status.tilt_error_deg:+.1f} deg"
+        ),
+        (
+            f"command pan={status.pan_command_deg:+.1f} "
+            f"tilt={status.tilt_command_deg:+.1f} deg"
+        ),
+        f"serial={serial_state}  q=quit r=retarget",
+    )
+
+
 def run_person_tracking(config):
     """持续跟踪画面中的全部人物，按 q 退出。"""
     cap = _open_camera(config)
+    controller = None
     try:
         person_tracker = UltralyticsMultiPersonTracker(
             model_path=config.model_path,
@@ -72,6 +107,11 @@ def run_person_tracking(config):
                 config.prediction_duplicate_containment_threshold
             ),
         )
+        controller = TrackingController(
+            config.control,
+            create_gimbal_client(config.serial),
+        )
+        controller.start()
         last_time = time.monotonic()
 
         while True:
@@ -90,10 +130,28 @@ def run_person_tracking(config):
             last_time = now
             tracked_people = aim_smoother.update(observed_people, dt)
 
-            annotated = render_tracks(frame, tracked_people)
+            height, width = frame.shape[:2]
+            frame_size = (width, height)
+            control_status = controller.update(
+                tracked_people,
+                frame_size,
+                now,
+            )
+            annotated = render_tracks(
+                frame,
+                tracked_people,
+                selected_track_id=control_status.target_id,
+                aim_center=controller.aim_center(frame_size),
+                status_lines=_control_status_lines(control_status),
+            )
             cv2.imshow(config.window_name, annotated)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
                 break
+            if key == ord("r"):
+                controller.reset_target()
     finally:
+        if controller is not None:
+            controller.close()
         cap.release()
         cv2.destroyAllWindows()
