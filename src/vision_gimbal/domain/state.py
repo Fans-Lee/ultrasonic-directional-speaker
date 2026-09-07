@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import FrozenSet, Optional
 
 from .control import AutoControlTelemetry, ControlSource, SerialLinkStatus
 from .geometry import GimbalPose, Point
@@ -25,13 +24,11 @@ class TargetStatus(str, Enum):
 @dataclass
 class SessionState:
     control_mode: ControlMode = ControlMode.STOPPED_MANUAL
-    selected_target_id: Optional[int] = None
-    active_target_id: Optional[int] = None
+    selected_target_id: int | None = None
+    active_target_id: int | None = None
     target_status: TargetStatus = TargetStatus.NONE
-    pressed_directions: FrozenSet[ManualDirection] = field(
-        default_factory=frozenset
-    )
-    last_commanded_pose: GimbalPose = GimbalPose()
+    pressed_directions: frozenset[ManualDirection] = field(default_factory=frozenset)
+    last_commanded_pose: GimbalPose = field(default_factory=GimbalPose)
     shutdown_requested: bool = False
     last_message: str = "请选择画面中的人物"
 
@@ -39,14 +36,14 @@ class SessionState:
 @dataclass(frozen=True)
 class UiSnapshot:
     control_mode: ControlMode
-    selected_target_id: Optional[int]
-    active_target_id: Optional[int]
+    selected_target_id: int | None
+    active_target_id: int | None
     target_status: TargetStatus
     last_commanded_pose: GimbalPose
     control_source: ControlSource
     telemetry: AutoControlTelemetry
     serial: SerialLinkStatus
-    aim_center: Optional[Point] = None
+    aim_center: Point | None = None
     selected_target_available: bool = False
     message: str = ""
 

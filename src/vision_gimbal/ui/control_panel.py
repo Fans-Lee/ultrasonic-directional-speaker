@@ -64,9 +64,7 @@ class ControlPanel(QWidget):
         separator.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(separator)
         self.manual_label = QLabel(
-            "停止追踪后可按住：\n"
-            "W 向上    S 向下\n"
-            "A 向左    D 向右"
+            "停止追踪后可按住：\nW 向上    S 向下\nA 向左    D 向右"
         )
         self.manual_label.setStyleSheet("padding: 8px; color: #d1d5db;")
         layout.addWidget(self.manual_label)

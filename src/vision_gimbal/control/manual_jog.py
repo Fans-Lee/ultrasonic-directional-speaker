@@ -1,6 +1,6 @@
 """Translate semantic WASD directions into gimbal velocity."""
 
-from typing import AbstractSet
+from collections.abc import Set as AbstractSet
 
 from ..config.schema import ManualControlConfig
 from ..domain.control import MotionRequest
@@ -23,13 +23,9 @@ class ManualJogController:
         )
         return MotionRequest(
             pan_velocity_deg_s=(
-                horizontal
-                * self.config.pan_speed_deg_s
-                * self.config.pan_right_sign
+                horizontal * self.config.pan_speed_deg_s * self.config.pan_right_sign
             ),
             tilt_velocity_deg_s=(
-                vertical
-                * self.config.tilt_speed_deg_s
-                * self.config.tilt_up_sign
+                vertical * self.config.tilt_speed_deg_s * self.config.tilt_up_sign
             ),
         )

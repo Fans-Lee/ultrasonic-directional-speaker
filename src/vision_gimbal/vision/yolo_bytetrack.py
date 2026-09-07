@@ -1,6 +1,7 @@
 """Ultralytics YOLO and ByteTrack adapter."""
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import torch

@@ -1,7 +1,6 @@
 """Resolve only the target explicitly activated by the operator."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from ..config.schema import TargetLockConfig
 from ..domain.state import TargetStatus
@@ -11,7 +10,7 @@ from ..domain.tracking import TargetObservation, VisionSnapshot
 @dataclass(frozen=True)
 class TargetResolution:
     status: TargetStatus
-    observation: Optional[TargetObservation] = None
+    observation: TargetObservation | None = None
     released: bool = False
 
 
@@ -36,23 +35,17 @@ class TargetLock:
 
     def resolve(
         self,
-        snapshot: Optional[VisionSnapshot],
+        snapshot: VisionSnapshot | None,
         timestamp_s: float,
     ) -> TargetResolution:
         if self._track_id is None:
             return TargetResolution(TargetStatus.NONE)
 
         person = snapshot.find(self._track_id) if snapshot is not None else None
-        usable = (
-            person is not None
-            and person.confidence >= self.config.min_confidence
-        )
+        usable = person is not None and person.confidence >= self.config.min_confidence
         if usable and person.observed:
             observed_at = snapshot.captured_at
-            if (
-                self._last_observed_at is None
-                or observed_at > self._last_observed_at
-            ):
+            if self._last_observed_at is None or observed_at > self._last_observed_at:
                 self._last_observed_at = observed_at
 
         missing_for = float("inf")

@@ -1,7 +1,6 @@
 """Pure session state transitions driven by presentation intents."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from ..config.schema import TargetLockConfig
 from ..domain.geometry import GimbalPose
@@ -44,7 +43,7 @@ class TrackingSession:
     def handle(
         self,
         intent: UserIntent,
-        snapshot: Optional[VisionSnapshot],
+        snapshot: VisionSnapshot | None,
     ) -> SessionActions:
         if isinstance(intent, SelectTarget):
             return self._select_target(intent, snapshot)
@@ -60,12 +59,12 @@ class TrackingSession:
         if isinstance(intent, ShutdownRequested):
             self.state.shutdown_requested = True
             return self._stop_tracking("正在关闭")
-        raise TypeError("unsupported intent: %r" % (intent,))
+        raise TypeError(f"unsupported intent: {intent!r}")
 
     def _select_target(
         self,
         intent: SelectTarget,
-        snapshot: Optional[VisionSnapshot],
+        snapshot: VisionSnapshot | None,
     ) -> SessionActions:
         if snapshot is None:
             self.state.last_message = "尚未收到摄像头画面"
@@ -81,21 +80,17 @@ class TrackingSession:
 
         self.state.selected_target_id = person.track_id
         if self.state.active_target_id == person.track_id:
-            self.state.last_message = "正在追踪 ID %s" % person.track_id
+            self.state.last_message = f"正在追踪 ID {person.track_id}"
         elif self.state.control_mode is ControlMode.AUTO_TRACKING:
-            self.state.last_message = "已选择 ID %s，点击“切换目标”生效" % (
-                person.track_id,
-            )
+            self.state.last_message = f"已选择 ID {person.track_id}，点击“切换目标”生效"
         else:
             self.state.target_status = TargetStatus.READY
-            self.state.last_message = "已选择 ID %s，点击“开始追踪”" % (
-                person.track_id,
-            )
+            self.state.last_message = f"已选择 ID {person.track_id}，点击“开始追踪”"
         return SessionActions()
 
     def _start_tracking(
         self,
-        snapshot: Optional[VisionSnapshot],
+        snapshot: VisionSnapshot | None,
     ) -> SessionActions:
         selected = self.state.selected_target_id
         if selected is None:
@@ -115,7 +110,7 @@ class TrackingSession:
         self.state.active_target_id = selected
         self.state.target_status = TargetStatus.OBSERVED
         self.state.pressed_directions = frozenset()
-        self.state.last_message = "正在追踪 ID %s" % selected
+        self.state.last_message = f"正在追踪 ID {selected}"
         return SessionActions(
             reset_auto=True,
             reset_motion=True,
@@ -150,9 +145,7 @@ class TrackingSession:
         else:
             directions.discard(intent.direction)
         self.state.pressed_directions = frozenset(directions)
-        self.state.last_message = (
-            "WASD 手动控制中" if directions else "手动控制已停止"
-        )
+        self.state.last_message = "WASD 手动控制中" if directions else "手动控制已停止"
         return SessionActions()
 
     def set_target_status(self, status: TargetStatus) -> None:
@@ -161,9 +154,7 @@ class TrackingSession:
             status is TargetStatus.OBSERVED
             and self.state.selected_target_id == self.state.active_target_id
         ):
-            self.state.last_message = "正在追踪 ID %s" % (
-                self.state.active_target_id,
-            )
+            self.state.last_message = f"正在追踪 ID {self.state.active_target_id}"
         elif status is TargetStatus.PREDICTED:
             self.state.last_message = "目标短暂漏检，正在预测"
         elif status is TargetStatus.LOST:

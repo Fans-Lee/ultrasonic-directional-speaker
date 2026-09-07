@@ -1,7 +1,5 @@
 """Explicit-target visual tracking controller."""
 
-from typing import Optional
-
 from ..config.schema import AutoControlConfig, GimbalMotionConfig
 from ..domain.control import AutoControlTelemetry, MotionRequest
 from ..domain.geometry import GimbalPose

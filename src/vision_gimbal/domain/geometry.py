@@ -1,12 +1,10 @@
 """Small geometry value types shared by the domain."""
 
 from dataclasses import dataclass
-from typing import Tuple
 
-
-Point = Tuple[float, float]
-BoundingBox = Tuple[float, float, float, float]
-FrameSize = Tuple[int, int]
+Point = tuple[float, float]
+BoundingBox = tuple[float, float, float, float]
+FrameSize = tuple[int, int]
 
 
 @dataclass(frozen=True)

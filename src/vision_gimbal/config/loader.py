@@ -1,8 +1,9 @@
 """Load TOML configuration into immutable dataclasses."""
 
+from collections.abc import Mapping
 from dataclasses import fields, is_dataclass, replace
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any
 
 from .schema import AppConfig
 
@@ -10,7 +11,7 @@ from .schema import AppConfig
 def _toml_load(path: Path) -> Mapping[str, Any]:
     try:
         import tomllib
-    except ImportError:  # Python 3.9 and 3.10
+    except ImportError:  # Python 3.10
         import tomli as tomllib
 
     with path.open("rb") as stream:
@@ -22,26 +23,23 @@ def _merge_dataclass(instance, values: Mapping[str, Any], prefix: str = ""):
     unknown = sorted(set(values) - known)
     if unknown:
         location = prefix or type(instance).__name__
-        raise ValueError("unknown configuration key(s) in %s: %s" % (
-            location,
-            ", ".join(unknown),
-        ))
+        unknown_text = ", ".join(unknown)
+        raise ValueError(f"unknown configuration key(s) in {location}: {unknown_text}")
 
     changes = {}
     for name, value in values.items():
         current = getattr(instance, name)
         if is_dataclass(current):
             if not isinstance(value, Mapping):
-                raise ValueError("configuration section %s%s must be a table" % (
-                    prefix,
-                    name,
-                ))
+                raise ValueError(
+                    f"configuration section {prefix}{name} must be a table"
+                )
             value = _merge_dataclass(current, value, prefix + name + ".")
         changes[name] = value
     return replace(instance, **changes)
 
 
-def load_config(path: Optional[Path] = None) -> AppConfig:
+def load_config(path: Path | None = None) -> AppConfig:
     config = AppConfig()
     if path is None:
         return config

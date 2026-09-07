@@ -1,6 +1,7 @@
 """Detector/tracker boundary used by the vision pipeline."""
 
-from typing import Any, Protocol, Sequence
+from collections.abc import Sequence
+from typing import Any, Protocol
 
 from ..domain.tracking import TrackedPerson
 

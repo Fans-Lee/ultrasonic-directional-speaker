@@ -1,7 +1,5 @@
 """OpenCV USB camera adapter."""
 
-from typing import Optional
-
 import cv2
 
 from ..config.schema import CameraConfig
@@ -20,10 +18,10 @@ class OpenCVCamera:
         capture.set(cv2.CAP_PROP_FPS, self.config.fps)
         if not capture.isOpened():
             capture.release()
-            raise RuntimeError("无法打开摄像头：index=%s" % self.config.index)
+            raise RuntimeError(f"无法打开摄像头：index={self.config.index}")
         self._capture = capture
 
-    def read(self) -> Optional[object]:
+    def read(self) -> object | None:
         if self._capture is None:
             raise RuntimeError("camera is not open")
         ok, frame = self._capture.read()

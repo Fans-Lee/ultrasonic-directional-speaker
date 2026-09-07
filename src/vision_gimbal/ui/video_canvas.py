@@ -1,8 +1,8 @@
 """Aspect-fitted video widget with track selection."""
 
 import cv2
-from PySide6.QtCore import QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QImage, QMouseEvent, QPaintEvent, QPainter, QPixmap
+from PySide6.QtCore import QRect, Qt, Signal
+from PySide6.QtGui import QImage, QMouseEvent, QPainter, QPaintEvent, QPixmap
 from PySide6.QtWidgets import QWidget
 
 from ..application.vision_service import DisplayFrame
@@ -20,6 +20,7 @@ class VideoCanvas(QWidget):
         self._state = None
         self._pixmap = None
         self.setMinimumSize(640, 360)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setStyleSheet("background: #111827;")
 
@@ -59,7 +60,9 @@ class VideoCanvas(QWidget):
         painter.fillRect(self.rect(), Qt.GlobalColor.black)
         if self._pixmap is None:
             painter.setPen(Qt.GlobalColor.white)
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "等待摄像头画面…")
+            painter.drawText(
+                self.rect(), Qt.AlignmentFlag.AlignCenter, "等待摄像头画面…"
+            )
             return
         source = (self._pixmap.width(), self._pixmap.height())
         target = aspect_fit_rect(source, (self.width(), self.height()))
@@ -74,10 +77,7 @@ class VideoCanvas(QWidget):
         )
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if (
-            event.button() != Qt.MouseButton.LeftButton
-            or self._display_frame is None
-        ):
+        if event.button() != Qt.MouseButton.LeftButton or self._display_frame is None:
             return super().mousePressEvent(event)
         snapshot = self._display_frame.snapshot
         point = event.position()

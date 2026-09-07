@@ -25,7 +25,7 @@ class VisionWorker(QObject):
         try:
             while not self._stop_event.is_set():
                 self.display_frames.set(self.service.step())
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - worker error boundary
             if not self._stop_event.is_set():
                 self.failed.emit(str(error))
         finally:
@@ -63,7 +63,7 @@ class ControlWorker(QObject):
             return
         try:
             self.state_ready.emit(self.service.tick())
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - worker error boundary
             self._timer.stop()
             self.failed.emit(str(error))
             self.finished.emit()
@@ -155,14 +155,18 @@ class QtApplicationRuntime(QObject):
             self._vision_worker.request_stop()
         if self._control_worker is not None:
             self._control_worker.request_stop()
+        # ``stop`` may run after QApplication's main event loop has exited.
+        # Do not rely on queued worker.finished -> thread.quit connections then.
         if self._control_thread is not None:
-            if not self._control_thread.wait(1000):
-                self._control_thread.quit()
-                self._control_thread.wait(1000)
+            self._control_thread.quit()
         if self._vision_thread is not None:
-            if not self._vision_thread.wait(10000):
-                self.failed.emit("视觉线程未能在 10 秒内停止")
-                self._vision_thread.wait()
+            self._vision_thread.quit()
+        if self._control_thread is not None and not self._control_thread.wait(1000):
+            self._control_thread.requestInterruption()
+            self._control_thread.wait(1000)
+        if self._vision_thread is not None and not self._vision_thread.wait(10000):
+            self.failed.emit("视觉线程未能在 10 秒内停止")
+            self._vision_thread.wait()
         self.application.close()
         self._display_frames.clear()
         self._started = False

@@ -1,7 +1,7 @@
 """Maintain one constant-velocity Kalman filter per track ID."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from typing import Dict, Iterable, List, Optional
 
 import cv2
 import numpy as np
@@ -18,9 +18,7 @@ class KalmanPointFilter:
         self.filter.measurementMatrix = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float32
         )
-        self.filter.processNoiseCov = np.diag(
-            [1.0, 1.0, 25.0, 25.0]
-        ).astype(np.float32)
+        self.filter.processNoiseCov = np.diag([1.0, 1.0, 25.0, 25.0]).astype(np.float32)
         self.filter.measurementNoiseCov = np.eye(2, dtype=np.float32) * 16.0
         self.filter.errorCovPost = np.eye(4, dtype=np.float32) * 10.0
         self.initialized = False
@@ -36,7 +34,7 @@ class KalmanPointFilter:
             dtype=np.float32,
         )
 
-    def predict(self, dt_s: float) -> Optional[Point]:
+    def predict(self, dt_s: float) -> Point | None:
         if not self.initialized:
             return None
         self._set_dt(dt_s)
@@ -66,13 +64,13 @@ class _TrackState:
 class PerTrackKalmanSmoother:
     def __init__(self, config: VisionConfig) -> None:
         self.config = config
-        self._states: Dict[int, _TrackState] = {}
+        self._states: dict[int, _TrackState] = {}
 
     def update(
         self,
         observed_people: Iterable[TrackedPerson],
         dt_s: float,
-    ) -> List[TrackedPerson]:
+    ) -> list[TrackedPerson]:
         dt_s = min(max(float(dt_s), 1.0 / 120.0), 0.25)
         predictions = {
             track_id: state.point_filter.predict(dt_s)
@@ -83,7 +81,7 @@ class PerTrackKalmanSmoother:
         observed_ids = set()
         for person in observed_people:
             if person.track_id in observed_ids:
-                raise ValueError("duplicate track_id in frame: %s" % person.track_id)
+                raise ValueError(f"duplicate track_id in frame: {person.track_id}")
             observed_ids.add(person.track_id)
             state = self._states.get(person.track_id)
             if state is None:

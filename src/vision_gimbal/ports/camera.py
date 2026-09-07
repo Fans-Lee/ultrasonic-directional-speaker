@@ -1,11 +1,11 @@
 """Camera input boundary."""
 
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 class CameraSource(Protocol):
     def open(self) -> None: ...
 
-    def read(self) -> Optional[Any]: ...
+    def read(self) -> Any | None: ...
 
     def close(self) -> None: ...

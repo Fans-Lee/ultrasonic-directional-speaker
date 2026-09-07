@@ -36,8 +36,6 @@ class CameraProjection:
         delta_x = observation.aim_point[0] - center_x
         delta_y = observation.aim_point[1] - center_y
         return AngularError(
-            self.config.pan_sign
-            * math.degrees(math.atan2(delta_x, focal_x)),
-            self.config.tilt_sign
-            * math.degrees(math.atan2(delta_y, focal_y)),
+            self.config.pan_sign * math.degrees(math.atan2(delta_x, focal_x)),
+            self.config.tilt_sign * math.degrees(math.atan2(delta_y, focal_y)),
         )

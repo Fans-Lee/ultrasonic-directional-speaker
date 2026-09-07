@@ -1,7 +1,5 @@
 """Integrate velocity through shared acceleration and angle limits."""
 
-from typing import Optional
-
 from ..config.schema import AxisMotionConfig, GimbalMotionConfig
 from ..domain.control import GimbalSetpoint, MotionRequest
 from ..domain.geometry import GimbalPose
@@ -17,7 +15,7 @@ class GimbalMotionLimiter:
         self._pose = GimbalPose()
         self._pan_speed = 0.0
         self._tilt_speed = 0.0
-        self._last_timestamp: Optional[float] = None
+        self._last_timestamp: float | None = None
 
     @property
     def pose(self) -> GimbalPose:
@@ -84,23 +82,14 @@ class GimbalMotionLimiter:
             self.config.tilt.min_angle_deg,
             self.config.tilt.max_angle_deg,
         )
-        if pan in (self.config.pan.min_angle_deg, self.config.pan.max_angle_deg):
-            if (pan == self.config.pan.min_angle_deg and self._pan_speed < 0.0) or (
-                pan == self.config.pan.max_angle_deg and self._pan_speed > 0.0
-            ):
-                self._pan_speed = 0.0
-        if tilt in (
-            self.config.tilt.min_angle_deg,
-            self.config.tilt.max_angle_deg,
+        if (pan == self.config.pan.min_angle_deg and self._pan_speed < 0.0) or (
+            pan == self.config.pan.max_angle_deg and self._pan_speed > 0.0
         ):
-            if (
-                tilt == self.config.tilt.min_angle_deg
-                and self._tilt_speed < 0.0
-            ) or (
-                tilt == self.config.tilt.max_angle_deg
-                and self._tilt_speed > 0.0
-            ):
-                self._tilt_speed = 0.0
+            self._pan_speed = 0.0
+        if (tilt == self.config.tilt.min_angle_deg and self._tilt_speed < 0.0) or (
+            tilt == self.config.tilt.max_angle_deg and self._tilt_speed > 0.0
+        ):
+            self._tilt_speed = 0.0
         self._pose = GimbalPose(pan, tilt)
         return GimbalSetpoint(timestamp_s, pan, tilt)
 

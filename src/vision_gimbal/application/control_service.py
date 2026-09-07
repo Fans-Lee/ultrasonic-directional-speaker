@@ -1,7 +1,6 @@
 """Single owner of session mutation and outbound gimbal commands."""
 
 import queue
-from typing import Optional
 
 from ..control.auto_tracking import AutoTrackingController
 from ..control.command_arbiter import CommandArbiter
@@ -10,7 +9,7 @@ from ..control.motion_limiter import GimbalMotionLimiter
 from ..control.target_lock import TargetLock
 from ..domain.control import AutoControlTelemetry, ControlSource
 from ..domain.intents import Intent
-from ..domain.state import ControlMode, TargetStatus, UiSnapshot
+from ..domain.state import ControlMode, UiSnapshot
 from ..domain.tracking import VisionSnapshot
 from ..ports.clock import Clock
 from ..ports.gimbal import GimbalSink
@@ -42,7 +41,7 @@ class ControlService:
         self.gimbal = gimbal
         self.clock = clock
         self.snapshots = snapshots
-        self._intents: "queue.Queue[Intent]" = queue.Queue()
+        self._intents: queue.Queue[Intent] = queue.Queue()
         self._telemetry = AutoControlTelemetry()
         self._control_source = ControlSource.HOLD
         self._started = False
@@ -56,7 +55,7 @@ class ControlService:
     def submit(self, intent: Intent) -> None:
         self._intents.put(intent)
 
-    def tick(self, timestamp_s: Optional[float] = None) -> UiSnapshot:
+    def tick(self, timestamp_s: float | None = None) -> UiSnapshot:
         now = self.clock.now() if timestamp_s is None else timestamp_s
         snapshot = self.snapshots.get()
         actions = self._drain_intents(snapshot)
@@ -67,9 +66,7 @@ class ControlService:
             and self.session.state.control_mode is ControlMode.AUTO_TRACKING
         ):
             actions = actions.merge(
-                self.session.stop_for_fault(
-                    "串口连接中断，已停止自动追踪"
-                )
+                self.session.stop_for_fault("串口连接中断，已停止自动追踪")
             )
         self._serial_was_connected = serial_status.connected
         if actions.reset_auto:
@@ -171,7 +168,7 @@ class ControlService:
 
     def _drain_intents(
         self,
-        snapshot: Optional[VisionSnapshot],
+        snapshot: VisionSnapshot | None,
     ) -> SessionActions:
         actions = SessionActions()
         while True:

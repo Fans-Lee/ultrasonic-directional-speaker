@@ -4,45 +4,44 @@ import sys
 import unittest
 from pathlib import Path
 
-
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from vision_gimbal.application.control_service import ControlService  # noqa: E402
-from vision_gimbal.application.latest_snapshot import (  # noqa: E402
+from vision_gimbal.application.control_service import ControlService
+from vision_gimbal.application.latest_snapshot import (
     LatestSnapshotStore,
 )
-from vision_gimbal.application.tracking_session import (  # noqa: E402
+from vision_gimbal.application.tracking_session import (
     TrackingSession,
 )
-from vision_gimbal.config.schema import AppConfig  # noqa: E402
-from vision_gimbal.control.auto_tracking import (  # noqa: E402
+from vision_gimbal.config.schema import AppConfig
+from vision_gimbal.control.auto_tracking import (
     AutoTrackingController,
 )
-from vision_gimbal.control.camera_projection import CameraProjection  # noqa: E402
-from vision_gimbal.control.close_range_aim import (  # noqa: E402
+from vision_gimbal.control.camera_projection import CameraProjection
+from vision_gimbal.control.close_range_aim import (
     CloseRangeAimPolicy,
 )
-from vision_gimbal.control.command_arbiter import CommandArbiter  # noqa: E402
-from vision_gimbal.control.manual_jog import ManualJogController  # noqa: E402
-from vision_gimbal.control.motion_limiter import (  # noqa: E402
+from vision_gimbal.control.command_arbiter import CommandArbiter
+from vision_gimbal.control.manual_jog import ManualJogController
+from vision_gimbal.control.motion_limiter import (
     GimbalMotionLimiter,
 )
-from vision_gimbal.control.target_lock import TargetLock  # noqa: E402
-from vision_gimbal.domain.control import SerialLinkStatus  # noqa: E402
-from vision_gimbal.domain.intents import (  # noqa: E402
+from vision_gimbal.control.target_lock import TargetLock
+from vision_gimbal.domain.control import SerialLinkStatus
+from vision_gimbal.domain.intents import (
     ManualDirection,
     ManualKeyChanged,
     SelectTarget,
     StartTracking,
     StopTracking,
 )
-from vision_gimbal.domain.state import ControlMode, TargetStatus  # noqa: E402
-from vision_gimbal.domain.tracking import (  # noqa: E402
+from vision_gimbal.domain.state import ControlMode, TargetStatus
+from vision_gimbal.domain.tracking import (
     TrackedPerson,
     VisionSnapshot,
 )
-from vision_gimbal.ui.video_transform import (  # noqa: E402
+from vision_gimbal.ui.video_transform import (
     select_track_at,
     widget_to_source,
 )
@@ -156,7 +155,7 @@ class TrackingSessionTests(unittest.TestCase):
 
 class ControlServiceTests(unittest.TestCase):
     def test_lost_target_stops_instead_of_switching_people(self):
-        service, store, clock, _ = _control_service()
+        service, store, _, _ = _control_service()
         store.set(
             _snapshot(
                 1,

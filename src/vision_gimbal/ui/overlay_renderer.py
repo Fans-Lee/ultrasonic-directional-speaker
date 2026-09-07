@@ -1,12 +1,9 @@
 """Draw tracking metadata without making selection decisions."""
 
-from typing import Optional
-
 import cv2
 
 from ..domain.state import UiSnapshot
 from ..domain.tracking import VisionSnapshot
-
 
 _COLORS = (
     (80, 220, 80),
@@ -33,15 +30,13 @@ def _dashed_rectangle(image, top_left, bottom_right, color, thickness=2):
 def render_overlay(
     frame,
     vision: VisionSnapshot,
-    state: Optional[UiSnapshot],
+    state: UiSnapshot | None,
 ):
     annotated = frame.copy()
     selected_id = state.selected_target_id if state is not None else None
     active_id = state.active_target_id if state is not None else None
     for person in vision.tracks:
-        x1, y1, x2, y2 = (
-            round(value) for value in person.bbox_xyxy
-        )
+        x1, y1, x2, y2 = (round(value) for value in person.bbox_xyxy)
         if person.track_id == active_id:
             color = (0, 255, 255)
             suffix = " TRACKING"
@@ -61,7 +56,7 @@ def render_overlay(
             suffix += " PREDICTED"
         cv2.putText(
             annotated,
-            "ID %s%s" % (person.track_id, suffix),
+            f"ID {person.track_id}{suffix}",
             (max(0, x1), max(20, y1 - 8)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.58,

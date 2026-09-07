@@ -21,12 +21,12 @@ class StatusPanel(QWidget):
         layout.addWidget(self.message_label)
 
     def apply(self, view: MainWindowViewModel) -> None:
-        self.serial_label.setText("串口状态：%s" % view.serial_text)
+        self.serial_label.setText(f"串口状态：{view.serial_text}")
         self.serial_detail.setText(view.serial_detail)
         self.message_label.setText(view.message)
 
     def show_error(self, message: str) -> None:
-        self.message_label.setText("错误：%s" % message)
+        self.message_label.setText(f"错误：{message}")
         self.message_label.setStyleSheet(
             "padding: 8px; background: #7f1d1d; color: white; border-radius: 4px;"
         )

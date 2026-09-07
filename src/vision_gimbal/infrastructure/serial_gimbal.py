@@ -1,7 +1,6 @@
 """Non-blocking serial adapter for the ESP32 ``(pan,tilt)`` protocol."""
 
 import threading
-from typing import Optional
 
 from ..config.schema import SerialConfig
 from ..domain.control import GimbalSetpoint, SerialLinkStatus
@@ -11,7 +10,7 @@ def encode_gimbal_command(setpoint: GimbalSetpoint) -> bytes:
     pan_degrees, tilt_degrees = setpoint.rounded_degrees()
     if not -90 <= pan_degrees <= 90 or not -90 <= tilt_degrees <= 90:
         raise ValueError("gimbal angles must be within -90..90 degrees")
-    return ("(%s,%s)" % (pan_degrees, tilt_degrees)).encode("ascii")
+    return f"({pan_degrees},{tilt_degrees})".encode("ascii")
 
 
 class SerialGimbalSink:
@@ -21,8 +20,8 @@ class SerialGimbalSink:
         self.config = config
         self._condition = threading.Condition()
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
-        self._latest_setpoint: Optional[GimbalSetpoint] = None
+        self._thread: threading.Thread | None = None
+        self._latest_setpoint: GimbalSetpoint | None = None
         self._published_version = 0
         self._connected = False
         self._last_response = ""
@@ -95,22 +94,22 @@ class SerialGimbalSink:
                         device.write(encode_gimbal_command(setpoint))
                         sent_version = version
                     if device.in_waiting > 0:
-                        response = device.readline().decode(
-                            "utf-8", errors="replace"
-                        ).strip()
+                        response = (
+                            device.readline().decode("utf-8", errors="replace").strip()
+                        )
                         if response:
                             with self._condition:
                                 self._last_response = response
                                 self._last_error = ""
                     self._stop_event.wait(0.01)
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - serial backend boundary
                 self._set_error(str(error))
             finally:
                 self._set_connected(False)
                 if device is not None:
                     try:
                         device.close()
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110 - best-effort close
                         pass
             if self._stop_event.wait(self.config.reconnect_interval_s):
                 break

@@ -52,11 +52,11 @@ def main(argv=None) -> int:
         bundle = build_application(config)
         bundle.window.show()
         bundle.runtime.start()
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 - top-level startup boundary
         QMessageBox.critical(None, "视觉云台启动失败", str(error))
         return 1
 
-    print("YOLO inference device: %s" % bundle.inference_device)
+    print(f"YOLO inference device: {bundle.inference_device}")
     qt_app.aboutToQuit.connect(bundle.runtime.stop)
     result = qt_app.exec()
     bundle.runtime.stop()

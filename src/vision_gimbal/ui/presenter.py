@@ -3,7 +3,6 @@
 from ..domain.state import ControlMode, TargetStatus, UiSnapshot
 from .view_models import MainWindowViewModel
 
-
 _TARGET_STATUS_TEXT = {
     TargetStatus.NONE: "未选择",
     TargetStatus.READY: "已选择，等待开始",
@@ -30,14 +29,12 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
 
     return MainWindowViewModel(
         mode_text="自动追踪" if automatic else "停止追踪 / 手动控制",
-        selected_target_text=(
-            "无" if selected is None else "ID %s" % selected
-        ),
-        active_target_text="无" if active is None else "ID %s" % active,
+        selected_target_text=("无" if selected is None else f"ID {selected}"),
+        active_target_text="无" if active is None else f"ID {active}",
         target_status_text=_TARGET_STATUS_TEXT[snapshot.target_status],
-        pose_text="pan %+.1f°  tilt %+.1f°" % (
-            snapshot.last_commanded_pose.pan_degrees,
-            snapshot.last_commanded_pose.tilt_degrees,
+        pose_text=(
+            f"pan {snapshot.last_commanded_pose.pan_degrees:+.1f}°  "
+            f"tilt {snapshot.last_commanded_pose.tilt_degrees:+.1f}°"
         ),
         control_source_text=snapshot.control_source.value.upper(),
         serial_text=serial_text,

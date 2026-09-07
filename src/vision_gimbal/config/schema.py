@@ -1,7 +1,6 @@
 """Typed configuration for the complete desktop application."""
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -47,7 +46,7 @@ class VisionConfig:
         ):
             value = getattr(self, name)
             if not 0.0 < value <= 1.0:
-                raise ValueError("vision.%s must be in (0, 1]" % name)
+                raise ValueError(f"vision.{name} must be in (0, 1]")
 
 
 @dataclass(frozen=True)
@@ -199,7 +198,7 @@ class GimbalMotionConfig:
 
 @dataclass(frozen=True)
 class SerialConfig:
-    port: Optional[str] = None
+    port: str | None = None
     baudrate: int = 115200
     read_timeout_s: float = 0.02
     write_timeout_s: float = 0.10
@@ -232,9 +231,7 @@ class AppConfig:
     camera: CameraConfig = field(default_factory=CameraConfig)
     vision: VisionConfig = field(default_factory=VisionConfig)
     target: TargetLockConfig = field(default_factory=TargetLockConfig)
-    projection: CameraProjectionConfig = field(
-        default_factory=CameraProjectionConfig
-    )
+    projection: CameraProjectionConfig = field(default_factory=CameraProjectionConfig)
     close_range: CloseRangeConfig = field(default_factory=CloseRangeConfig)
     automatic: AutoControlConfig = field(default_factory=AutoControlConfig)
     manual: ManualControlConfig = field(default_factory=ManualControlConfig)

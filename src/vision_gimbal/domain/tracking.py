@@ -1,7 +1,6 @@
 """Stable data contracts produced by the vision pipeline."""
 
 from dataclasses import dataclass
-from typing import Tuple
 
 from .geometry import BoundingBox, FrameSize, Point
 
@@ -31,7 +30,7 @@ class VisionSnapshot:
     frame_id: int
     captured_at: float
     frame_size: FrameSize
-    tracks: Tuple[TrackedPerson, ...] = ()
+    tracks: tuple[TrackedPerson, ...] = ()
 
     def find(self, track_id: int):
         return next(

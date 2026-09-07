@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
 
 
 class ManualDirection(str, Enum):
@@ -48,11 +47,11 @@ class ShutdownRequested(UserIntent):
     pass
 
 
-Intent = Union[
-    SelectTarget,
-    StartTracking,
-    StopTracking,
-    ManualKeyChanged,
-    ClearManualKeys,
-    ShutdownRequested,
-]
+Intent = (
+    SelectTarget
+    | StartTracking
+    | StopTracking
+    | ManualKeyChanged
+    | ClearManualKeys
+    | ShutdownRequested
+)

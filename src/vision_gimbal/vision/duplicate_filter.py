@@ -1,6 +1,6 @@
 """Geometry helpers and duplicate-person suppression."""
 
-from typing import List, Sequence, Tuple
+from collections.abc import Sequence
 
 from ..domain.geometry import BoundingBox, Point
 from ..domain.tracking import TrackedPerson
@@ -11,7 +11,7 @@ def _area(bbox: BoundingBox) -> float:
     return max(0.0, x2 - x1) * max(0.0, y2 - y1)
 
 
-def bbox_overlap(a: BoundingBox, b: BoundingBox) -> Tuple[float, float]:
+def bbox_overlap(a: BoundingBox, b: BoundingBox) -> tuple[float, float]:
     ax1, ay1, ax2, ay2 = a
     bx1, by1, bx2, by2 = b
     intersection = max(0.0, min(ax2, bx2) - max(ax1, bx1)) * max(
@@ -57,7 +57,7 @@ def suppress_duplicate_people(
     people: Sequence[TrackedPerson],
     iou_threshold: float,
     containment_threshold: float,
-) -> List[TrackedPerson]:
+) -> list[TrackedPerson]:
     kept = []
     for person in sorted(people, key=lambda item: item.confidence, reverse=True):
         if any(

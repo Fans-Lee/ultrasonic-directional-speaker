@@ -1,7 +1,7 @@
 """Pure aspect-fit coordinate conversion and person hit testing."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Optional, Tuple
 
 from ..domain.geometry import FrameSize, Point
 from ..domain.tracking import TrackedPerson
@@ -41,15 +41,12 @@ def widget_to_source(
     point: Point,
     source_size: FrameSize,
     widget_size: FrameSize,
-) -> Optional[Point]:
+) -> Point | None:
     rect = aspect_fit_rect(source_size, widget_size)
     if rect.width <= 0.0 or rect.height <= 0.0:
         return None
     x, y = point
-    if not (
-        rect.x <= x <= rect.x + rect.width
-        and rect.y <= y <= rect.y + rect.height
-    ):
+    if not (rect.x <= x <= rect.x + rect.width and rect.y <= y <= rect.y + rect.height):
         return None
     source_width, source_height = source_size
     return (
@@ -61,7 +58,7 @@ def widget_to_source(
 def hit_test_track(
     source_point: Point,
     tracks: Iterable[TrackedPerson],
-) -> Optional[int]:
+) -> int | None:
     x, y = source_point
     candidates = []
     for track in tracks:
@@ -77,7 +74,7 @@ def select_track_at(
     source_size: FrameSize,
     widget_size: FrameSize,
     tracks: Iterable[TrackedPerson],
-) -> Optional[int]:
+) -> int | None:
     source_point = widget_to_source(widget_point, source_size, widget_size)
     if source_point is None:
         return None

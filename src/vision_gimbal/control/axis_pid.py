@@ -1,7 +1,5 @@
 """A bounded PID that produces requested angular velocity."""
 
-from typing import Optional
-
 from ..config.schema import AxisPidConfig
 
 
@@ -13,7 +11,7 @@ class AxisVelocityPid:
     def __init__(self, config: AxisPidConfig) -> None:
         self.config = config
         self._integral = 0.0
-        self._previous_error: Optional[float] = None
+        self._previous_error: float | None = None
 
     def reset(self) -> None:
         self._integral = 0.0

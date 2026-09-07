@@ -1,8 +1,7 @@
 """Control values shared without depending on a transport or UI."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from .geometry import AngularError, GimbalPose, Point
 
@@ -20,10 +19,7 @@ class MotionRequest:
 
     @property
     def moving(self) -> bool:
-        return bool(
-            self.pan_velocity_deg_s != 0.0
-            or self.tilt_velocity_deg_s != 0.0
-        )
+        return bool(self.pan_velocity_deg_s != 0.0 or self.tilt_velocity_deg_s != 0.0)
 
 
 @dataclass(frozen=True)
@@ -51,8 +47,8 @@ class SerialLinkStatus:
 @dataclass(frozen=True)
 class AutoControlTelemetry:
     target_observed: bool = False
-    angular_error: AngularError = AngularError()
-    control_aim_point: Optional[Point] = None
+    angular_error: AngularError = field(default_factory=AngularError)
+    control_aim_point: Point | None = None
     close_range_active: bool = False
     box_height_ratio: float = 0.0
 
@@ -61,4 +57,4 @@ class AutoControlTelemetry:
 class ControlDecision:
     source: ControlSource
     request: MotionRequest
-    setpoint: Optional[GimbalSetpoint] = None
+    setpoint: GimbalSetpoint | None = None

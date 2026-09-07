@@ -1,7 +1,6 @@
 """Near-range upper-body aiming policy."""
 
 from dataclasses import dataclass, replace
-from typing import Optional, Tuple
 
 from ..config.schema import CloseRangeConfig
 from ..domain.geometry import FrameSize
@@ -17,11 +16,11 @@ class CloseRangeStatus:
 class CloseRangeAimPolicy:
     def __init__(self, config: CloseRangeConfig) -> None:
         self.config = config
-        self._track_id: Optional[int] = None
+        self._track_id: int | None = None
         self._active = False
         self._enter_count = 0
         self._exit_count = 0
-        self._height_ratio: Optional[float] = None
+        self._height_ratio: float | None = None
         self._last_box_height_px = 0.0
         self._last_observation_timestamp = None
 
@@ -44,14 +43,12 @@ class CloseRangeAimPolicy:
         self,
         observation: TargetObservation,
         frame_size: FrameSize,
-    ) -> Tuple[TargetObservation, CloseRangeStatus]:
+    ) -> tuple[TargetObservation, CloseRangeStatus]:
         if observation.track_id != self._track_id:
             self.reset()
             self._track_id = observation.track_id
 
-        is_new_observation = (
-            observation.timestamp_s != self._last_observation_timestamp
-        )
+        is_new_observation = observation.timestamp_s != self._last_observation_timestamp
         if observation.observed and is_new_observation:
             self._last_observation_timestamp = observation.timestamp_s
             self._update_state(observation.bbox_xyxy, frame_size)
@@ -83,18 +80,15 @@ class CloseRangeAimPolicy:
             self._height_ratio = ratio
         else:
             alpha = self.config.ratio_ema_alpha
-            self._height_ratio = (
-                alpha * ratio + (1.0 - alpha) * self._height_ratio
-            )
+            self._height_ratio = alpha * ratio + (1.0 - alpha) * self._height_ratio
         self._last_box_height_px = box_height
 
         margin_px = frame_height * self.config.border_margin_ratio
         touches_top = y1 <= margin_px
         touches_bottom = y2 >= frame_height - margin_px
         if not self._active:
-            entering = (
-                self._height_ratio >= self.config.enter_height_ratio
-                and (touches_top or touches_bottom)
+            entering = self._height_ratio >= self.config.enter_height_ratio and (
+                touches_top or touches_bottom
             )
             self._enter_count = self._enter_count + 1 if entering else 0
             if self._enter_count >= self.config.enter_confirmed_frames:
