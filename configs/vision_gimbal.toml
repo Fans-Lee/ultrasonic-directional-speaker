@@ -1,0 +1,100 @@
+[camera]
+index = 1
+rotation = 0
+width = 1280
+height = 720
+fps = 30
+
+[vision]
+model_path = "../yolo26s.pt"
+tracker_config_path = "bytetrack_person.yaml"
+confidence = 0.10
+image_size = 512
+nms_iou_threshold = 0.60
+duplicate_iou_threshold = 0.70
+duplicate_containment_threshold = 0.90
+prediction_duplicate_iou_threshold = 0.55
+prediction_duplicate_containment_threshold = 0.85
+max_prediction_frames = 12
+device = "auto"
+
+[target]
+min_confidence = 0.10
+prediction_timeout_s = 0.20
+release_timeout_s = 0.80
+max_selection_age_frames = 30
+
+[projection]
+horizontal_fov_deg = 70.0
+vertical_fov_deg = 43.0
+aim_offset_x_px = 0.0
+aim_offset_y_px = 0.0
+pan_sign = -1.0
+tilt_sign = -1.0
+
+[close_range]
+enter_height_ratio = 0.90
+exit_height_ratio = 0.70
+upper_body_fraction = 0.30
+border_margin_ratio = 0.03
+enter_confirmed_frames = 5
+exit_confirmed_frames = 10
+ratio_ema_alpha = 0.40
+
+[automatic.pan_pid]
+kp = 1.0
+ki = 0.08
+kd = 0.0
+deadband_deg = 0.6
+integral_limit = 10.0
+output_limit_deg_s = 25.0
+
+[automatic.tilt_pid]
+kp = 1.0
+ki = 0.08
+kd = 0.0
+deadband_deg = 0.6
+integral_limit = 10.0
+output_limit_deg_s = 20.0
+
+[automatic]
+nominal_dt_s = 0.10
+maximum_dt_s = 0.50
+
+[manual]
+pan_speed_deg_s = 20.0
+tilt_speed_deg_s = 16.0
+pan_right_sign = -1.0
+tilt_up_sign = 1.0
+
+[motion.pan]
+min_angle_deg = -90.0
+max_angle_deg = 90.0
+max_speed_deg_s = 25.0
+max_accel_deg_s2 = 80.0
+
+[motion.tilt]
+min_angle_deg = -10.0
+max_angle_deg = 75.0
+max_speed_deg_s = 20.0
+max_accel_deg_s2 = 60.0
+
+[motion]
+nominal_dt_s = 0.10
+maximum_dt_s = 0.50
+
+[serial]
+port = ""
+baudrate = 115200
+read_timeout_s = 0.02
+write_timeout_s = 0.10
+reconnect_interval_s = 1.0
+startup_delay_s = 0.8
+
+[runtime]
+control_hz = 10.0
+
+[ui]
+window_title = "视觉云台跟踪系统"
+initial_width = 1280
+initial_height = 760
