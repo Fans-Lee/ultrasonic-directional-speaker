@@ -10,6 +10,10 @@ CV_TEST_DIR = Path(__file__).resolve().parents[1] / "src" / "cv_test"
 sys.path.insert(0, str(CV_TEST_DIR))
 
 from camera_geometry import CameraGeometry, CameraGeometryConfig  # noqa: E402
+from close_range_aim import (  # noqa: E402
+    CloseRangeAimConfig,
+    CloseRangeAimPolicy,
+)
 from control_models import (  # noqa: E402
     AimObservation,
     GimbalSetpoint,
@@ -120,6 +124,88 @@ class CameraGeometryTests(unittest.TestCase):
 
         self.assertTrue(math.isclose(pan, -45.0, abs_tol=1e-6))
         self.assertTrue(math.isclose(tilt, -45.0, abs_tol=1e-6))
+
+
+class CloseRangeAimPolicyTests(unittest.TestCase):
+    def test_uses_upper_body_after_confirmed_oversized_box(self):
+        policy = CloseRangeAimPolicy(
+            CloseRangeAimConfig(
+                enter_height_ratio=0.90,
+                exit_height_ratio=0.70,
+                upper_body_fraction=0.30,
+                enter_confirmed_frames=2,
+                exit_confirmed_frames=2,
+                ratio_ema_alpha=1.0,
+            )
+        )
+        full_height = AimObservation(
+            timestamp_s=1.0,
+            track_id=6,
+            aim_point=(50.0, 50.0),
+            confidence=0.9,
+            observed=True,
+            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
+        )
+
+        first, first_status = policy.update(full_height, (100, 100))
+        second, second_status = policy.update(full_height, (100, 100))
+
+        self.assertFalse(first_status.active)
+        self.assertEqual(first.aim_point, (50.0, 50.0))
+        self.assertTrue(second_status.active)
+        self.assertEqual(second.aim_point, (50.0, 30.0))
+
+    def test_exits_only_when_smaller_box_is_fully_visible(self):
+        policy = CloseRangeAimPolicy(
+            CloseRangeAimConfig(
+                enter_confirmed_frames=1,
+                exit_confirmed_frames=2,
+                ratio_ema_alpha=1.0,
+            )
+        )
+        full_height = AimObservation(
+            timestamp_s=1.0,
+            track_id=6,
+            aim_point=(50.0, 50.0),
+            confidence=0.9,
+            observed=True,
+            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
+        )
+        smaller_visible = AimObservation(
+            timestamp_s=1.1,
+            track_id=6,
+            aim_point=(50.0, 50.0),
+            confidence=0.9,
+            observed=True,
+            bbox_xyxy=(20.0, 20.0, 80.0, 80.0),
+        )
+        policy.update(full_height, (100, 100))
+
+        first, first_status = policy.update(smaller_visible, (100, 100))
+        second, second_status = policy.update(smaller_visible, (100, 100))
+
+        self.assertTrue(first_status.active)
+        self.assertNotEqual(first.aim_point, (50.0, 50.0))
+        self.assertFalse(second_status.active)
+        self.assertEqual(second.aim_point, (50.0, 50.0))
+
+    def test_prediction_cannot_enter_close_range_mode(self):
+        policy = CloseRangeAimPolicy(
+            CloseRangeAimConfig(enter_confirmed_frames=1)
+        )
+        predicted = AimObservation(
+            timestamp_s=1.0,
+            track_id=6,
+            aim_point=(50.0, 50.0),
+            confidence=0.9,
+            observed=False,
+            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
+        )
+
+        result, status = policy.update(predicted, (100, 100))
+
+        self.assertFalse(status.active)
+        self.assertEqual(result.aim_point, (50.0, 50.0))
 
 
 class VisualServoTests(unittest.TestCase):

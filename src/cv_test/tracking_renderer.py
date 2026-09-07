@@ -40,6 +40,7 @@ def render_tracks(
     people: Iterable[TrackedPerson],
     selected_track_id: Optional[int] = None,
     aim_center: Optional[Tuple[float, float]] = None,
+    control_aim_point: Optional[Tuple[float, float]] = None,
     status_lines: Sequence[str] = (),
 ) -> np.ndarray:
     """绘制稳定 ID、人物框、原始中心点和滤波后的瞄准点。"""
@@ -91,6 +92,17 @@ def render_tracks(
             (0, 0, 255),
             cv2.MARKER_CROSS,
             32,
+            2,
+        )
+
+    if control_aim_point is not None:
+        point = tuple(round(value) for value in control_aim_point)
+        cv2.drawMarker(
+            annotated,
+            point,
+            (255, 0, 255),
+            cv2.MARKER_TILTED_CROSS,
+            24,
             2,
         )
 

@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 
 Point = Tuple[float, float]
+BoundingBox = Tuple[float, float, float, float]
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class AimObservation:
     aim_point: Point
     confidence: float
     observed: bool
+    bbox_xyxy: Optional[BoundingBox] = None
 
 
 @dataclass(frozen=True)
@@ -55,5 +57,8 @@ class TrackingControlStatus:
     tilt_error_deg: float = 0.0
     pan_command_deg: float = 0.0
     tilt_command_deg: float = 0.0
+    close_range_active: bool = False
+    box_height_ratio: float = 0.0
+    control_aim_point: Optional[Point] = None
     serial: SerialLinkStatus = SerialLinkStatus()
 

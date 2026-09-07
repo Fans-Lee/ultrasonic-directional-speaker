@@ -128,5 +128,6 @@ class TargetSelector:
             aim_point=person.aim_point,
             confidence=person.confidence,
             observed=person.observed,
+            bbox_xyxy=person.bbox_xyxy,
         )
 

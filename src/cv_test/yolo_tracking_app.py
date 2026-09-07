@@ -79,6 +79,12 @@ def _control_status_lines(status) -> Sequence[str]:
             f"command pan={status.pan_command_deg:+.1f} "
             f"tilt={status.tilt_command_deg:+.1f} deg"
         ),
+        (
+            "aim=upper-body"
+            if status.close_range_active
+            else "aim=body-center"
+        )
+        + f"  box-height={status.box_height_ratio:.0%}",
         f"serial={serial_state}  q=quit r=retarget",
     )
 
@@ -142,6 +148,7 @@ def run_person_tracking(config):
                 tracked_people,
                 selected_track_id=control_status.target_id,
                 aim_center=controller.aim_center(frame_size),
+                control_aim_point=control_status.control_aim_point,
                 status_lines=_control_status_lines(control_status),
             )
             cv2.imshow(config.window_name, annotated)

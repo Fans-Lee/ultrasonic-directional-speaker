@@ -5,6 +5,7 @@ from typing import Sequence, Tuple
 
 if __package__:
     from .camera_geometry import CameraGeometry, CameraGeometryConfig
+    from .close_range_aim import CloseRangeAimConfig, CloseRangeAimPolicy
     from .control_models import TrackingControlStatus
     from .gimbal_serial import GimbalCommandSink
     from .target_selector import TargetSelector, TargetSelectorConfig
@@ -12,6 +13,7 @@ if __package__:
     from .visual_servo import VisualServoConfig, VisualServoController
 else:
     from camera_geometry import CameraGeometry, CameraGeometryConfig
+    from close_range_aim import CloseRangeAimConfig, CloseRangeAimPolicy
     from control_models import TrackingControlStatus
     from gimbal_serial import GimbalCommandSink
     from target_selector import TargetSelector, TargetSelectorConfig
@@ -27,6 +29,9 @@ class TrackingControllerConfig:
     )
     camera: CameraGeometryConfig = field(
         default_factory=CameraGeometryConfig
+    )
+    close_range: CloseRangeAimConfig = field(
+        default_factory=CloseRangeAimConfig
     )
     servo: VisualServoConfig = field(default_factory=VisualServoConfig)
 
@@ -47,6 +52,7 @@ class TrackingController:
         self.gimbal = gimbal
         self.geometry = CameraGeometry(config.camera)
         self.selector = TargetSelector(config.target_selector)
+        self.close_range = CloseRangeAimPolicy(config.close_range)
         self.servo = VisualServoController(config.servo, self.geometry)
         self._minimum_update_period = 1.0 / config.update_hz
         self._last_update_at = None
@@ -60,6 +66,7 @@ class TrackingController:
 
     def reset_target(self) -> None:
         self.selector.clear()
+        self.close_range.reset()
         self.servo.reset_pid()
         self._last_update_at = None
 
@@ -89,8 +96,15 @@ class TrackingController:
             self.geometry.aim_center(frame_size),
         )
         if observation is None:
+            close_range_status = self.close_range.status()
+            control_aim_point = None
             output = self.servo.hold(timestamp_s)
         else:
+            observation, close_range_status = self.close_range.update(
+                observation,
+                frame_size,
+            )
+            control_aim_point = observation.aim_point
             output = self.servo.update(
                 observation,
                 frame_size,
@@ -107,6 +121,9 @@ class TrackingController:
             tilt_error_deg=output.tilt_error_deg,
             pan_command_deg=pan_command,
             tilt_command_deg=tilt_command,
+            close_range_active=close_range_status.active,
+            box_height_ratio=close_range_status.height_ratio,
+            control_aim_point=control_aim_point,
             serial=self.gimbal.status(),
         )
         return self._status
