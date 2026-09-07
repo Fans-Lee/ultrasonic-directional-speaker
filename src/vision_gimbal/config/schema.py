@@ -177,11 +177,11 @@ class AxisMotionConfig:
 
 
 def _default_pan_motion() -> AxisMotionConfig:
-    return AxisMotionConfig(-75.0, 75.0, 25.0, 80.0)
+    return AxisMotionConfig(-90.0, 90.0, 25.0, 80.0)
 
 
 def _default_tilt_motion() -> AxisMotionConfig:
-    return AxisMotionConfig(-45.0, 45.0, 20.0, 60.0)
+    return AxisMotionConfig(-10.0, 75.0, 20.0, 60.0)
 
 
 @dataclass(frozen=True)

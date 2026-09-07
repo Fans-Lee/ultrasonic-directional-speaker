@@ -5,8 +5,8 @@ from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from ..domain.intents import ManualDirection
 
 _KEY_MAP = {
-    Qt.Key.Key_A: ManualDirection.LEFT,
-    Qt.Key.Key_D: ManualDirection.RIGHT,
+    Qt.Key.Key_D: ManualDirection.LEFT,
+    Qt.Key.Key_A: ManualDirection.RIGHT,
     Qt.Key.Key_W: ManualDirection.UP,
     Qt.Key.Key_S: ManualDirection.DOWN,
 }
