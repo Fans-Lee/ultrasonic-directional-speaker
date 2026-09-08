@@ -62,22 +62,22 @@ nominal_dt_s = 0.10
 maximum_dt_s = 0.50
 
 [manual]
-pan_speed_deg_s = 20.0
-tilt_speed_deg_s = 16.0
+pan_speed_deg_s = 40.0
+tilt_speed_deg_s = 32.0
 pan_right_sign = -1.0
 tilt_up_sign = 1.0
 
 [motion.pan]
 min_angle_deg = -90.0
 max_angle_deg = 90.0
-max_speed_deg_s = 25.0
-max_accel_deg_s2 = 80.0
+max_speed_deg_s = 60.0
+max_accel_deg_s2 = 120.0
 
 [motion.tilt]
-min_angle_deg = -10.0
+min_angle_deg = -25.0
 max_angle_deg = 75.0
-max_speed_deg_s = 20.0
-max_accel_deg_s2 = 60.0
+max_speed_deg_s = 40.0
+max_accel_deg_s2 = 100.0
 
 [motion]
 nominal_dt_s = 0.10

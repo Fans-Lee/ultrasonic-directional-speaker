@@ -72,7 +72,7 @@ esp_err_t GimbalController::setAngles(int32_t panDegrees,
   if (error != ESP_OK) return error;
 
   error = writeChannel(
-      kTiltChannel, angleToDuty(tiltDegrees, kTiltDirection));
+      kTiltChannel, angleToDuty(tiltDegrees + kTiltCompensationDegrees, kTiltDirection));
   if (error != ESP_OK) return error;
 
   panDegrees_ = panDegrees;

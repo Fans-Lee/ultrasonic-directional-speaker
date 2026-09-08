@@ -15,6 +15,7 @@ class GimbalController final {
   static constexpr int32_t kMinimumAngle = -90;
   static constexpr int32_t kMaximumAngle = 90;
   static constexpr int32_t kPanCompensationDegrees = 112;
+  static constexpr int32_t kTiltCompensationDegrees = 12;
   esp_err_t begin();
   esp_err_t setAngles(int32_t panDegrees, int32_t tiltDegrees);
 
