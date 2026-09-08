@@ -85,11 +85,46 @@ maximum_dt_s = 0.50
 
 [serial]
 port = ""
-baudrate = 115200
+baudrate = 460800
 read_timeout_s = 0.02
 write_timeout_s = 0.10
 reconnect_interval_s = 1.0
 startup_delay_s = 0.8
+
+[audio]
+enabled = false
+auto_start = true
+
+[audio.capture]
+device = ""
+sample_rate = 48000
+channels = 1
+block_ms = 10
+queue_ms = 100
+
+[audio.dsp]
+highpass_hz = 250.0
+lowpass_hz = 3000.0
+measured_eq_enabled = false
+eq_max_boost_db = 6.0
+level_target_dbfs = -20.0
+level_max_gain_db = 12.0
+level_attack_ms = 50.0
+level_release_ms = 500.0
+level_freeze_below_dbfs = -55.0
+compressor_threshold_dbfs = -12.0
+compressor_ratio = 3.0
+compressor_attack_ms = 10.0
+compressor_release_ms = 120.0
+limiter_ceiling_dbfs = -1.5
+
+[audio.stream]
+sample_rate = 8000
+packet_ms = 20
+prebuffer_ms = 60
+device_buffer_ms = 256
+data_timeout_ms = 100
+host_queue_packets = 8
 
 [runtime]
 control_hz = 10.0

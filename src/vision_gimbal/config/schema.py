@@ -199,7 +199,7 @@ class GimbalMotionConfig:
 @dataclass(frozen=True)
 class SerialConfig:
     port: str | None = None
-    baudrate: int = 115200
+    baudrate: int = 460800
     read_timeout_s: float = 0.02
     write_timeout_s: float = 0.10
     reconnect_interval_s: float = 1.0
@@ -208,6 +208,92 @@ class SerialConfig:
     def __post_init__(self) -> None:
         if self.baudrate <= 0:
             raise ValueError("serial.baudrate must be positive")
+
+
+@dataclass(frozen=True)
+class AudioCaptureConfig:
+    device: str | int | None = None
+    sample_rate: int = 48000
+    channels: int = 1
+    block_ms: int = 10
+    queue_ms: int = 100
+
+    def __post_init__(self) -> None:
+        if self.sample_rate <= 0 or self.channels <= 0:
+            raise ValueError("audio capture rate and channels must be positive")
+        if self.block_ms <= 0 or self.queue_ms < self.block_ms:
+            raise ValueError("audio capture queue must hold at least one block")
+
+
+@dataclass(frozen=True)
+class AudioDspConfig:
+    highpass_hz: float = 250.0
+    lowpass_hz: float = 3000.0
+    measured_eq_enabled: bool = False
+    eq_max_boost_db: float = 6.0
+    level_target_dbfs: float = -20.0
+    level_max_gain_db: float = 12.0
+    level_attack_ms: float = 50.0
+    level_release_ms: float = 500.0
+    level_freeze_below_dbfs: float = -55.0
+    compressor_threshold_dbfs: float = -12.0
+    compressor_ratio: float = 3.0
+    compressor_attack_ms: float = 10.0
+    compressor_release_ms: float = 120.0
+    limiter_ceiling_dbfs: float = -1.5
+
+    def __post_init__(self) -> None:
+        if not 0.0 < self.highpass_hz < self.lowpass_hz:
+            raise ValueError("audio DSP must satisfy 0 < highpass < lowpass")
+        if self.eq_max_boost_db < 0.0 or self.level_max_gain_db < 0.0:
+            raise ValueError("audio gain limits cannot be negative")
+        if self.level_attack_ms <= 0.0 or self.level_release_ms <= 0.0:
+            raise ValueError("audio level time constants must be positive")
+        if self.compressor_ratio < 1.0:
+            raise ValueError("audio compressor ratio must be at least one")
+        if self.compressor_attack_ms <= 0.0 or self.compressor_release_ms <= 0.0:
+            raise ValueError("audio compressor time constants must be positive")
+        if not -12.0 <= self.limiter_ceiling_dbfs < 0.0:
+            raise ValueError("audio limiter ceiling must be in [-12, 0) dBFS")
+
+
+@dataclass(frozen=True)
+class AudioStreamConfig:
+    sample_rate: int = 8000
+    packet_ms: int = 20
+    prebuffer_ms: int = 60
+    device_buffer_ms: int = 256
+    data_timeout_ms: int = 100
+    host_queue_packets: int = 8
+
+    def __post_init__(self) -> None:
+        if self.sample_rate != 8000:
+            raise ValueError("protocol version 1 requires an 8000 Hz stream")
+        if self.packet_ms <= 0 or self.prebuffer_ms < self.packet_ms:
+            raise ValueError("audio prebuffer must hold at least one packet")
+        if self.device_buffer_ms < self.prebuffer_ms:
+            raise ValueError("device audio buffer must cover the prebuffer")
+        if self.data_timeout_ms < self.packet_ms:
+            raise ValueError("audio data timeout must cover one packet")
+        if self.host_queue_packets <= 0:
+            raise ValueError("audio host queue must be positive")
+
+    @property
+    def packet_samples(self) -> int:
+        return self.sample_rate * self.packet_ms // 1000
+
+    @property
+    def prebuffer_samples(self) -> int:
+        return self.sample_rate * self.prebuffer_ms // 1000
+
+
+@dataclass(frozen=True)
+class AudioConfig:
+    enabled: bool = False
+    auto_start: bool = True
+    capture: AudioCaptureConfig = field(default_factory=AudioCaptureConfig)
+    dsp: AudioDspConfig = field(default_factory=AudioDspConfig)
+    stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
 
 
 @dataclass(frozen=True)
@@ -237,5 +323,6 @@ class AppConfig:
     manual: ManualControlConfig = field(default_factory=ManualControlConfig)
     motion: GimbalMotionConfig = field(default_factory=GimbalMotionConfig)
     serial: SerialConfig = field(default_factory=SerialConfig)
+    audio: AudioConfig = field(default_factory=AudioConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     ui: UiConfig = field(default_factory=UiConfig)

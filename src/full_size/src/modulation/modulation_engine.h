@@ -3,6 +3,8 @@
 #include "audio_modulator.h"
 #include "envelope_modulator.h"
 #include "modulation_types.h"
+#include "../audio/flash_audio_source.h"
+#include "../audio/stream_audio_source.h"
 
 namespace ultrasonic {
 
@@ -13,6 +15,11 @@ class ModulationEngine final {
   void stop();
   bool startEnvelopeTone(uint32_t toneHz);
   bool startAudio(bool loop);
+  bool startStream(const AudioStreamParameters& parameters);
+  bool pushStreamSamples(const uint8_t* samples, uint32_t sampleCount);
+  bool streamReadyToPlay() const;
+  StreamBufferStats streamStats() const;
+  bool streaming() const;
   void setAudioModulationMode(AudioModulationMode mode);
   AudioModulationMode audioModulationMode() const;
   void setAudioProcessingMode(AudioProcessingMode mode);
@@ -27,11 +34,14 @@ class ModulationEngine final {
   enum class Mode : uint8_t {
     kOff,
     kEnvelopeTone,
-    kAudio,
+    kEmbeddedAudio,
+    kStreamAudio,
   };
 
   EnvelopeModulator envelopeModulator_;
   AudioModulator audioModulator_;
+  FlashAudioSource flashAudioSource_;
+  StreamAudioSource streamAudioSource_;
   Mode mode_ = Mode::kOff;
   AudioModulationMode audioModulationMode_ = AudioModulationMode::kDsbAm;
   AudioProcessingMode audioProcessingMode_ =

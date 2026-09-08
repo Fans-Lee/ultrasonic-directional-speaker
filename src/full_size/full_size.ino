@@ -17,7 +17,7 @@ void reportStartupError(const char* stage, esp_err_t error) {
 }  // namespace
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(460800);
   delay(300);
 
   const esp_err_t driverError = gDriver.begin();

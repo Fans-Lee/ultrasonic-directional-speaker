@@ -59,6 +59,7 @@ enum class ModulationFrameStatus : uint8_t {
   kIdle,
   kRunning,
   kCompleted,
+  kUnderrun,
 };
 
 struct ModulationFrame {
@@ -70,6 +71,15 @@ struct ModulationFrame {
 struct AudioInfo {
   uint32_t sampleCount = 0;
   uint32_t sampleRate = 0;
+};
+
+struct AudioStreamParameters {
+  uint32_t sampleRate = 8000;
+  uint32_t prebufferSamples = 480;
+  uint32_t dataTimeoutMs = 100;
+  AudioModulationMode modulationMode = AudioModulationMode::kDsbAm;
+  AudioProcessingMode processingMode = AudioProcessingMode::kRaw;
+  AudioDriveMode driveMode = AudioDriveMode::kStandard;
 };
 
 }  // namespace ultrasonic
