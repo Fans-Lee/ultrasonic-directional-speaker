@@ -12,27 +12,59 @@ bool ModulationEngine::begin(const DutyConfig& dutyConfig) {
 
 void ModulationEngine::stop() {
   mode_ = Mode::kOff;
-  audioModulator_.stop();
+  flashAudioSource_.stop();
+  streamAudioSource_.stop();
 }
 
 bool ModulationEngine::startEnvelopeTone(uint32_t toneHz) {
   if (!initialized_) return false;
 
-  audioModulator_.stop();
+  flashAudioSource_.stop();
+  streamAudioSource_.stop();
   if (!envelopeModulator_.reset(toneHz, audioDriveMode_)) return false;
   mode_ = Mode::kEnvelopeTone;
   return true;
 }
 
 bool ModulationEngine::startAudio(bool loop) {
-  if (!initialized_ ||
-      !audioModulator_.start(audioModulationMode_, audioProcessingMode_,
-                             audioDriveMode_, loop)) {
+  if (!initialized_ || !flashAudioSource_.start(loop)) {
     return false;
   }
-
-  mode_ = Mode::kAudio;
+  streamAudioSource_.stop();
+  mode_ = Mode::kEmbeddedAudio;
   return true;
+}
+
+bool ModulationEngine::startStream(const AudioStreamParameters& parameters) {
+  if (!initialized_ || parameters.sampleRate != 8000 ||
+      !streamAudioSource_.start(parameters.sampleRate,
+                                parameters.prebufferSamples)) {
+    return false;
+  }
+  flashAudioSource_.stop();
+  audioModulationMode_ = parameters.modulationMode;
+  audioProcessingMode_ = parameters.processingMode;
+  audioDriveMode_ = parameters.driveMode;
+  mode_ = Mode::kStreamAudio;
+  return true;
+}
+
+bool ModulationEngine::pushStreamSamples(const uint8_t* samples,
+                                         uint32_t sampleCount) {
+  return mode_ == Mode::kStreamAudio &&
+         streamAudioSource_.writeSamples(samples, sampleCount);
+}
+
+bool ModulationEngine::streamReadyToPlay() const {
+  return mode_ == Mode::kStreamAudio && streamAudioSource_.readyToPlay();
+}
+
+StreamBufferStats ModulationEngine::streamStats() const {
+  return streamAudioSource_.stats();
+}
+
+bool ModulationEngine::streaming() const {
+  return mode_ == Mode::kStreamAudio;
 }
 
 void ModulationEngine::setAudioModulationMode(AudioModulationMode mode) {
@@ -63,12 +95,34 @@ ModulationFrame ModulationEngine::nextFrame() {
   switch (mode_) {
     case Mode::kEnvelopeTone:
       return envelopeModulator_.nextFrame();
-    case Mode::kAudio: {
-      ModulationFrame frame = audioModulator_.nextFrame();
-      if (frame.status == ModulationFrameStatus::kCompleted) {
-        mode_ = Mode::kOff;
-      }
+    case Mode::kEmbeddedAudio: {
+      uint8_t sample = 128;
+      const AudioReadStatus status = flashAudioSource_.readSample(&sample);
+      if (status == AudioReadStatus::kIdle) return {};
+      ModulationFrame frame = {
+          status == AudioReadStatus::kCompleted
+              ? ModulationFrameStatus::kCompleted
+              : ModulationFrameStatus::kRunning,
+          audioModulator_.dutyForSample(sample, audioModulationMode_,
+                                        audioProcessingMode_, audioDriveMode_),
+          flashAudioSource_.info().sampleRate,
+      };
+      if (status == AudioReadStatus::kCompleted) mode_ = Mode::kOff;
       return frame;
+    }
+    case Mode::kStreamAudio: {
+      uint8_t sample = 128;
+      const AudioReadStatus status = streamAudioSource_.readSample(&sample);
+      if (status == AudioReadStatus::kUnderrun) {
+        return {ModulationFrameStatus::kUnderrun, 0,
+                streamAudioSource_.sampleRateHz()};
+      }
+      if (status != AudioReadStatus::kSample) return {};
+      return {ModulationFrameStatus::kRunning,
+              audioModulator_.dutyForSample(
+                  sample, audioModulationMode_, audioProcessingMode_,
+                  audioDriveMode_),
+              streamAudioSource_.sampleRateHz()};
     }
     case Mode::kOff:
     default:
@@ -82,9 +136,22 @@ ModulationFrameStatus ModulationEngine::skipFrames(uint32_t frameCount) {
     case Mode::kEnvelopeTone:
       status = envelopeModulator_.skipFrames(frameCount);
       break;
-    case Mode::kAudio:
-      status = audioModulator_.skipFrames(frameCount);
+    case Mode::kEmbeddedAudio: {
+      const AudioReadStatus sourceStatus =
+          flashAudioSource_.skipSamples(frameCount);
+      status = sourceStatus == AudioReadStatus::kCompleted
+                   ? ModulationFrameStatus::kCompleted
+                   : ModulationFrameStatus::kRunning;
       break;
+    }
+    case Mode::kStreamAudio: {
+      const AudioReadStatus sourceStatus =
+          streamAudioSource_.skipSamples(frameCount);
+      status = sourceStatus == AudioReadStatus::kUnderrun
+                   ? ModulationFrameStatus::kUnderrun
+                   : ModulationFrameStatus::kRunning;
+      break;
+    }
     case Mode::kOff:
     default:
       return status;
@@ -95,7 +162,7 @@ ModulationFrameStatus ModulationEngine::skipFrames(uint32_t frameCount) {
 }
 
 AudioInfo ModulationEngine::audioInfo() const {
-  return audioModulator_.info();
+  return flashAudioSource_.info();
 }
 
 }  // namespace ultrasonic

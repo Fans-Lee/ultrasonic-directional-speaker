@@ -1,9 +1,6 @@
 #include "audio_modulator.h"
 
-#include <Arduino.h>
 #include <math.h>
-
-#include "../data/audio_data.h"
 
 namespace ultrasonic {
 namespace {
@@ -57,108 +54,33 @@ bool AudioModulator::begin(const DutyConfig& dutyConfig) {
   }
 
   initialized_ = true;
-  stop();
   return true;
 }
 
-bool AudioModulator::start(AudioModulationMode modulationMode,
-                           AudioProcessingMode processingMode,
-                           AudioDriveMode driveMode, bool loop) {
-  if (!initialized_ || kAudioSampleCount == 0 || kAudioSampleRate == 0) {
-    return false;
-  }
-
-  sampleIndex_ = 0;
-  modulationMode_ = modulationMode;
-  processingMode_ = processingMode;
-  driveMode_ = driveMode;
-  loop_ = loop;
-  running_ = true;
-  return true;
-}
-
-void AudioModulator::stop() {
-  sampleIndex_ = 0;
-  loop_ = false;
-  running_ = false;
-}
-
-ModulationFrame AudioModulator::nextFrame() {
-  ModulationFrame frame = {};
-  if (!running_) return frame;
-
-  frame.status = ModulationFrameStatus::kRunning;
-  const uint8_t sample = readSample(sampleIndex_);
-  if (driveMode_ == AudioDriveMode::kBoost) {
-    switch (modulationMode_) {
+uint32_t AudioModulator::dutyForSample(
+    uint8_t sample, AudioModulationMode modulationMode,
+    AudioProcessingMode processingMode, AudioDriveMode driveMode) const {
+  if (!initialized_) return 0;
+  const uint8_t processedSample =
+      processingMode == AudioProcessingMode::kLoudnessEnhanced
+          ? loudnessLut_[sample]
+          : sample;
+  if (driveMode == AudioDriveMode::kBoost) {
+    switch (modulationMode) {
       case AudioModulationMode::kSram:
-        frame.duty = boostSramModulator_.dutyForSample(sample);
-        break;
+        return boostSramModulator_.dutyForSample(processedSample);
       case AudioModulationMode::kDsbAm:
       default:
-        frame.duty = boostDsbAmModulator_.dutyForSample(sample);
-        break;
-    }
-  } else {
-    switch (modulationMode_) {
-      case AudioModulationMode::kSram:
-        frame.duty = standardSramModulator_.dutyForSample(sample);
-        break;
-      case AudioModulationMode::kDsbAm:
-      default:
-        frame.duty = standardDsbAmModulator_.dutyForSample(sample);
-        break;
+        return boostDsbAmModulator_.dutyForSample(processedSample);
     }
   }
-  frame.sampleRateHz = kAudioSampleRate;
-
-  ++sampleIndex_;
-  if (sampleIndex_ >= kAudioSampleCount) {
-    if (loop_) {
-      sampleIndex_ = 0;
-    } else {
-      running_ = false;
-      frame.status = ModulationFrameStatus::kCompleted;
-    }
+  switch (modulationMode) {
+    case AudioModulationMode::kSram:
+      return standardSramModulator_.dutyForSample(processedSample);
+    case AudioModulationMode::kDsbAm:
+    default:
+      return standardDsbAmModulator_.dutyForSample(processedSample);
   }
-
-  return frame;
-}
-
-ModulationFrameStatus AudioModulator::skipFrames(uint32_t frameCount) {
-  if (!running_) return ModulationFrameStatus::kIdle;
-  if (frameCount == 0) return ModulationFrameStatus::kRunning;
-
-  if (loop_) {
-    sampleIndex_ =
-        (sampleIndex_ + frameCount % kAudioSampleCount) % kAudioSampleCount;
-    return ModulationFrameStatus::kRunning;
-  }
-
-  const uint32_t remainingSamples = kAudioSampleCount - sampleIndex_;
-  if (frameCount >= remainingSamples) {
-    sampleIndex_ = kAudioSampleCount;
-    running_ = false;
-    return ModulationFrameStatus::kCompleted;
-  }
-
-  sampleIndex_ += frameCount;
-  return ModulationFrameStatus::kRunning;
-}
-
-AudioInfo AudioModulator::info() const {
-  AudioInfo result = {};
-  result.sampleCount = kAudioSampleCount;
-  result.sampleRate = kAudioSampleRate;
-  return result;
-}
-
-uint8_t AudioModulator::readSample(uint32_t index) const {
-  const uint8_t sample = pgm_read_byte(&kAudioSamples[index]);
-
-  return processingMode_ == AudioProcessingMode::kLoudnessEnhanced
-             ? loudnessLut_[sample]
-             : sample;
 }
 
 }  // namespace ultrasonic

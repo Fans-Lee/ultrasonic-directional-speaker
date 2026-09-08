@@ -2,11 +2,13 @@
 
 from dataclasses import dataclass
 
+from .application.audio_service import AudioService
 from .application.control_service import ControlService
 from .application.latest_snapshot import LatestSnapshotStore
 from .application.runtime import ApplicationRuntime
 from .application.tracking_session import TrackingSession
 from .application.vision_service import VisionService
+from .audio.preprocessor import AudioPreprocessor
 from .config.schema import AppConfig
 from .control.auto_tracking import AutoTrackingController
 from .control.camera_projection import CameraProjection
@@ -15,8 +17,10 @@ from .control.command_arbiter import CommandArbiter
 from .control.manual_jog import ManualJogController
 from .control.motion_limiter import GimbalMotionLimiter
 from .control.target_lock import TargetLock
+from .infrastructure.device_gimbal import DeviceGimbalSink
 from .infrastructure.opencv_camera import OpenCVCamera
-from .infrastructure.serial_gimbal import create_gimbal_sink
+from .infrastructure.serial_device_link import create_device_link
+from .infrastructure.sounddevice_microphone import SoundDeviceMicrophone
 from .infrastructure.system_clock import SystemClock
 from .ui.main_window import MainWindow
 from .ui.qt_workers import QtApplicationRuntime
@@ -33,6 +37,8 @@ class ApplicationBundle:
 
 
 def build_application(config: AppConfig) -> ApplicationBundle:
+    if config.audio.enabled and not config.serial.port:
+        raise ValueError("audio streaming requires serial.port to be configured")
     clock = SystemClock()
     snapshots = LatestSnapshotStore()
     camera = OpenCVCamera(config.camera)
@@ -47,6 +53,9 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         CloseRangeAimPolicy(config.close_range),
         config.motion,
     )
+    device_link = create_device_link(
+        config.serial, config.audio.stream.host_queue_packets
+    )
     control_service = ControlService(
         TrackingSession(config.target),
         TargetLock(config.target),
@@ -54,11 +63,22 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         ManualJogController(config.manual),
         CommandArbiter(),
         GimbalMotionLimiter(config.motion),
-        create_gimbal_sink(config.serial),
+        DeviceGimbalSink(device_link),
         clock,
         snapshots,
     )
-    application = ApplicationRuntime(vision_service, control_service)
+    audio_service = AudioService(
+        config.audio,
+        SoundDeviceMicrophone(config.audio.capture),
+        AudioPreprocessor(config.audio.capture, config.audio.dsp, config.audio.stream),
+        device_link,
+    )
+    application = ApplicationRuntime(
+        vision_service,
+        control_service,
+        audio=audio_service,
+        device_link=device_link,
+    )
     runtime = QtApplicationRuntime(application, config.runtime.control_hz)
     window = MainWindow(config.ui)
     window.intent_emitted.connect(runtime.submit)

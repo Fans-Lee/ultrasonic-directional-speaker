@@ -10,6 +10,7 @@
 #include "../driver/gimbal_controller.h"
 #include "../driver/ultrasonic_driver.h"
 #include "../modulation/modulation_engine.h"
+#include "../protocol/protocol_server.h"
 
 namespace ultrasonic {
 
@@ -38,15 +39,22 @@ class UltrasonicApp final {
     kCarrierReport,
     kAudioOnce,
     kAudioLoop,
+    kStreamStart,
+    kStreamStop,
+    kProtocolMute,
+    kProtocolHello,
   };
 
   struct Command {
-    CommandType type;
-    uint32_t value;
+    CommandType type = CommandType::kStop;
+    uint32_t value = 0;
+    uint32_t requestSequence = 0;
+    AudioStreamParameters streamParameters = {};
   };
 
   static constexpr uint32_t kTimerEvent = 1U << 0;
   static constexpr uint32_t kCommandEvent = 1U << 1;
+  static constexpr uint32_t kStreamDataEvent = 1U << 2;
   // GPTimer 的 APB 分频器最小值为 2：80 MHz / 2 = 40 MHz。
   static constexpr uint32_t kSampleTimerResolutionHz = 40000000;
 
@@ -59,12 +67,21 @@ class UltrasonicApp final {
   void controlTask();
   void playbackTask();
   void handleSerial();
+  void handleProtocolByte(uint8_t input);
+  void handleProtocolMessage(const ProtocolMessage& message);
+  void handleProtocolHello(const ProtocolMessage& message);
+  void handleProtocolStreamStart(const ProtocolMessage& message);
+  void handleProtocolAudio(const ProtocolMessage& message);
+  void handleProtocolGimbal(const ProtocolMessage& message);
+  void reportProtocolStatus();
+  void checkProtocolAudioTimeout();
   void handleNumericInput();
   void beginPoseInput();
   void handlePoseCharacter(char input);
   void handlePoseInput();
   void printHelp() const;
   bool enqueue(CommandType type, uint32_t value = 0);
+  bool enqueue(const Command& command);
 
   bool handleCommand(const Command& command);
   void startCarrier();
@@ -76,6 +93,13 @@ class UltrasonicApp final {
   void resetCarrier();
   void reportCarrier() const;
   void startAudio(bool loop);
+  void startStream(const AudioStreamParameters& parameters,
+                   uint32_t requestSequence);
+  void startProtocolSession(uint32_t requestSequence);
+  void stopStream(uint32_t requestSequence);
+  void setProtocolMute(bool enabled, uint32_t requestSequence);
+  void maybeStartStreamPlayback();
+  void handleStreamUnderrun();
   void stopOutput(bool printStatus = true);
 
   void renderTimedSample();
@@ -92,6 +116,7 @@ class UltrasonicApp final {
   UltrasonicDriver& driver_;
   GimbalController gimbal_;
   ModulationEngine modulationEngine_;
+  ProtocolServer protocol_;
   QueueHandle_t commandQueue_ = nullptr;
   TaskHandle_t controlTaskHandle_ = nullptr;
   TaskHandle_t playbackTaskHandle_ = nullptr;
@@ -107,7 +132,18 @@ class UltrasonicApp final {
   bool numericInputOverflow_ = false;
   bool poseInputActive_ = false;
   bool poseInputOverflow_ = false;
+  bool protocolCaptureActive_ = false;
+  bool protocolMuted_ = true;
+  bool protocolTimeoutQueued_ = false;
   bool sampleTimerRunning_ = false;
+  ProtocolStreamState protocolStreamState_ = ProtocolStreamState::kIdle;
+  uint32_t lastProtocolStatusMs_ = 0;
+  uint32_t lastAudioDataMs_ = 0;
+  uint32_t expectedAudioSampleIndex_ = 0;
+  uint32_t audioSequenceGapCount_ = 0;
+  bool receivedFirstAudioPacket_ = false;
+  static constexpr uint32_t kProtocolStatusIntervalMs = 100;
+  uint32_t protocolAudioTimeoutMs_ = 100;
   uint64_t skippedFrameCount_ = 0;
   uint32_t maximumTimerBacklog_ = 0;
 };
