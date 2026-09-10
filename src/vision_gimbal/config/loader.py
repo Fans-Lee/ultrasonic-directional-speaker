@@ -49,15 +49,25 @@ def load_config(path: Path | None = None) -> AppConfig:
     vision = loaded.vision
     model_path = Path(vision.model_path)
     tracker_path = Path(vision.tracker_config_path)
+    recording_path = Path(loaded.audio.recording.path)
     if not model_path.is_absolute():
         model_path = (path.parent / model_path).resolve()
     if not tracker_path.is_absolute():
         tracker_path = (path.parent / tracker_path).resolve()
+    if not recording_path.is_absolute():
+        recording_path = (path.parent / recording_path).resolve()
     return replace(
         loaded,
         vision=replace(
             vision,
             model_path=str(model_path),
             tracker_config_path=str(tracker_path),
+        ),
+        audio=replace(
+            loaded.audio,
+            recording=replace(
+                loaded.audio.recording,
+                path=str(recording_path),
+            ),
         ),
     )

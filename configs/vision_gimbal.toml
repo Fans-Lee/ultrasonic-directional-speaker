@@ -126,6 +126,10 @@ device_buffer_ms = 256
 data_timeout_ms = 100
 host_queue_packets = 8
 
+[audio.recording]
+enabled = true
+path = "../output/audio_recordings/post_limiter_{timestamp}.wav"
+
 [runtime]
 control_hz = 10.0
 

@@ -288,12 +288,25 @@ class AudioStreamConfig:
 
 
 @dataclass(frozen=True)
+class AudioRecordingConfig:
+    enabled: bool = False
+    path: str = "output/audio_recordings/post_limiter_{timestamp}.wav"
+
+    def __post_init__(self) -> None:
+        if not self.path.strip():
+            raise ValueError("audio recording path cannot be empty")
+        if not self.path.lower().endswith(".wav"):
+            raise ValueError("audio recording path must end with .wav")
+
+
+@dataclass(frozen=True)
 class AudioConfig:
     enabled: bool = False
     auto_start: bool = True
     capture: AudioCaptureConfig = field(default_factory=AudioCaptureConfig)
     dsp: AudioDspConfig = field(default_factory=AudioDspConfig)
     stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
+    recording: AudioRecordingConfig = field(default_factory=AudioRecordingConfig)
 
 
 @dataclass(frozen=True)

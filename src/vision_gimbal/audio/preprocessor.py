@@ -18,6 +18,7 @@ from .resampler import StreamingLinearResampler
 class ProcessedAudio:
     samples: bytes
     clipped_samples: int
+    post_limiter_samples: NDArray[np.float32]
 
 
 class AudioPreprocessor:
@@ -90,4 +91,8 @@ class AudioPreprocessor:
         leveled = self._leveler.process(resampled)
         limited = self._compressor.process(leveled)
         quantized = quantize_pcm_u8(limited)
-        return ProcessedAudio(quantized.samples, quantized.clipped_samples)
+        return ProcessedAudio(
+            quantized.samples,
+            quantized.clipped_samples,
+            limited,
+        )

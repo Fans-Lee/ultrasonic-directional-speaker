@@ -5,12 +5,14 @@ from __future__ import annotations
 import queue
 import threading
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ..audio.clock_sync import BufferClockSync
 from ..audio.preprocessor import AudioPreprocessor
+from ..audio.recording import PostLimiterWavRecorder
 from ..config.schema import AudioConfig
 from ..domain.audio import AudioPacket, AudioStreamTelemetry
 from ..ports.device_link import DeviceLink
@@ -50,6 +52,13 @@ class AudioService:
         self._capture_overrun_count = 0
         self._quantizer_clip_count = 0
         self._clock_sync = BufferClockSync(config.stream.prebuffer_samples)
+        self._recorder = PostLimiterWavRecorder(
+            config.recording, config.stream.sample_rate
+        )
+
+    @property
+    def recording_path(self) -> Path | None:
+        return self._recorder.current_path
 
     def start(self) -> None:
         if not self.config.enabled:
@@ -110,15 +119,24 @@ class AudioService:
             self._clock_sync.reset()
             self._pending_pcm.clear()
             self._sample_index = 0
+            self._recorder.start()
             self._transmitting = True
-        self.device_link.start_audio_stream(parameters)
-        self.device_link.set_mute(False)
+        try:
+            self.device_link.start_audio_stream(parameters)
+            self.device_link.set_mute(False)
+        except Exception:
+            with self._state_lock:
+                self._transmitting = False
+                self._pending_pcm.clear()
+            self._recorder.close()
+            raise
 
     def stop_transmitting(self) -> None:
         with self._state_lock:
             was_transmitting = self._transmitting
             self._transmitting = False
             self._pending_pcm.clear()
+        self._recorder.close()
         if was_transmitting:
             self.device_link.set_mute(True)
             self.device_link.stop_audio_stream()
@@ -172,6 +190,7 @@ class AudioService:
             self.preprocessor.set_rate_correction_ppm(correction_ppm)
             processed = self.preprocessor.process(block)
             self._quantizer_clip_count += processed.clipped_samples
+            self._recorder.write(processed.post_limiter_samples)
             self._packetize(processed.samples)
 
     def _packetize(self, samples: bytes) -> None:
