@@ -2,9 +2,53 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 
 from ..protocol.messages import StreamState
+
+
+class AudioProcessingMode(str, Enum):
+    RAW = "raw"
+    LOUD = "loud"
+
+
+class AudioDriveMode(str, Enum):
+    STANDARD = "standard"
+    BOOST = "boost"
+
+
+class AudioModulationMode(str, Enum):
+    DSB_AM = "dsb_am"
+    SRAM = "sram"
+
+
+@dataclass(frozen=True)
+class AudioModeSettings:
+    processing: AudioProcessingMode = AudioProcessingMode.RAW
+    drive: AudioDriveMode = AudioDriveMode.STANDARD
+    modulation: AudioModulationMode = AudioModulationMode.DSB_AM
+
+    def __post_init__(self) -> None:
+        """Normalize strings returned by Qt's QVariant bridge to enums."""
+        processing = (
+            self.processing.value
+            if isinstance(self.processing, AudioProcessingMode)
+            else str(self.processing).lower()
+        )
+        drive = (
+            self.drive.value
+            if isinstance(self.drive, AudioDriveMode)
+            else str(self.drive).lower()
+        )
+        modulation = (
+            self.modulation.value
+            if isinstance(self.modulation, AudioModulationMode)
+            else str(self.modulation).lower().replace("-", "_")
+        )
+        object.__setattr__(self, "processing", AudioProcessingMode(processing))
+        object.__setattr__(self, "drive", AudioDriveMode(drive))
+        object.__setattr__(self, "modulation", AudioModulationMode(modulation))
 
 
 @dataclass(frozen=True)
@@ -29,3 +73,17 @@ class AudioStreamTelemetry:
     host_capture_overrun_count: int = 0
     host_tx_overrun_count: int = 0
     quantizer_clip_count: int = 0
+    host_rx_error_count: int = 0
+    host_sent_samples: int = 0
+    host_tx_queue_packets: int = 0
+    status_age_ms: int | None = None
+
+
+@dataclass(frozen=True)
+class AudioControlStatus:
+    enabled: bool = False
+    transmitting: bool = False
+    microphone_open: bool = False
+    settings: AudioModeSettings = field(default_factory=AudioModeSettings)
+    telemetry: AudioStreamTelemetry = field(default_factory=AudioStreamTelemetry)
+    last_error: str = ""

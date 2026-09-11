@@ -34,6 +34,7 @@ class _Outbound:
     ack_required: bool = False
     sample_index: int = 0
     end_of_stream: bool = False
+    stream_revision: int = 0
 
 
 @dataclass
@@ -41,6 +42,7 @@ class _PendingAck:
     wire: bytes
     message_type: MessageType
     sent_at: float
+    stream_revision: int = 0
     retries: int = 0
 
 
@@ -61,6 +63,7 @@ class SerialDeviceLink:
         self._latest_gimbal: bytes | None = None
         self._gimbal_dirty = False
         self._desired_stream: StreamStart | None = None
+        self._stream_revision = 0
         self._protocol_ready = False
         self._stream_ready = False
         self._connected = False
@@ -69,6 +72,9 @@ class SerialDeviceLink:
         self._session_id = 0
         self._sequence = 0
         self._host_tx_overrun_count = 0
+        self._host_rx_error_count = 0
+        self._host_sent_samples = 0
+        self._last_status_received_at: float | None = None
         self._audio_status = AudioStreamTelemetry()
 
     def start(self) -> None:
@@ -110,12 +116,16 @@ class SerialDeviceLink:
 
     def start_audio_stream(self, parameters: StreamStart) -> None:
         with self._condition:
+            self._stream_revision += 1
             self._desired_stream = parameters
             self._stream_ready = False
             self._audio_queue.clear()
             if self._protocol_ready:
                 self._queue_control_locked(
-                    MessageType.STREAM_START, parameters.pack(), ack_required=True
+                    MessageType.STREAM_START,
+                    parameters.pack(),
+                    ack_required=True,
+                    stream_revision=self._stream_revision,
                 )
 
     def send_audio(self, packet: AudioPacket) -> None:
@@ -128,6 +138,7 @@ class SerialDeviceLink:
 
     def stop_audio_stream(self) -> None:
         with self._condition:
+            self._stream_revision += 1
             self._desired_stream = None
             self._stream_ready = False
             self._audio_queue.clear()
@@ -159,13 +170,36 @@ class SerialDeviceLink:
             return replace(
                 self._audio_status,
                 host_tx_overrun_count=self._host_tx_overrun_count,
+                host_rx_error_count=self._host_rx_error_count,
+                host_sent_samples=self._host_sent_samples,
+                host_tx_queue_packets=len(self._audio_queue),
+                status_age_ms=(
+                    round((time.monotonic() - self._last_status_received_at) * 1000)
+                    if self._last_status_received_at is not None else None
+                ),
             )
 
+    @property
+    def stream_ready(self) -> bool:
+        """True only after the requested STREAM_START has been acknowledged."""
+        with self._condition:
+            return self._connected and self._stream_ready
+
     def _queue_control_locked(
-        self, message_type: MessageType, payload: bytes, *, ack_required: bool
+        self,
+        message_type: MessageType,
+        payload: bytes,
+        *,
+        ack_required: bool,
+        stream_revision: int = 0,
     ) -> None:
         self._control_queue.append(
-            _Outbound(message_type, payload, ack_required=ack_required)
+            _Outbound(
+                message_type,
+                payload,
+                ack_required=ack_required,
+                stream_revision=stream_revision,
+            )
         )
         self._condition.notify_all()
 
@@ -198,6 +232,7 @@ class SerialDeviceLink:
                     self._connected = False
                     self._control_queue.clear()
                     self._audio_queue.clear()
+                    self._last_status_received_at = None
                 hello = HELLO.pack(512, 100, 0x00000003)
                 self._send_outbound(
                     device,
@@ -209,12 +244,18 @@ class SerialDeviceLink:
                     waiting = device.in_waiting
                     incoming = device.read(waiting) if waiting else b""
                     if incoming:
-                        for frame in decoder.feed(incoming):
+                        previous_errors = decoder.decode_error_count
+                        frames = decoder.feed(incoming)
+                        with self._condition:
+                            self._host_rx_error_count += (
+                                decoder.decode_error_count - previous_errors
+                            )
+                        for frame in frames:
                             self._handle_frame(frame, pending)
                     self._retry_pending(device, pending)
                     sent = 0
                     while sent < 4:
-                        outbound = self._take_outbound()
+                        outbound = self._take_outbound(ack_pending=bool(pending))
                         if outbound is None:
                             break
                         self._send_outbound(device, outbound, pending)
@@ -245,9 +286,12 @@ class SerialDeviceLink:
             if self._stop_event.wait(self.config.reconnect_interval_s):
                 break
 
-    def _take_outbound(self) -> _Outbound | None:
+    def _take_outbound(self, *, ack_pending: bool = False) -> _Outbound | None:
         with self._condition:
-            if self._control_queue:
+            # Firmware caches only the most recent command ACK. Sending another
+            # reliable command before this ACK arrives can evict that cache and
+            # make a retry execute STREAM_START again, clearing the audio buffer.
+            if self._control_queue and not ack_pending:
                 outbound = self._control_queue.popleft()
                 self._condition.notify_all()
                 return outbound
@@ -285,9 +329,15 @@ class SerialDeviceLink:
         written = device.write(wire)
         if written != len(wire):
             raise OSError(f"short serial write: {written}/{len(wire)}")
+        if outbound.message_type is MessageType.AUDIO_DATA:
+            with self._condition:
+                self._host_sent_samples += len(outbound.payload)
         if outbound.ack_required:
             pending[sequence] = _PendingAck(
-                wire, outbound.message_type, time.monotonic()
+                wire,
+                outbound.message_type,
+                time.monotonic(),
+                outbound.stream_revision,
             )
 
     def _retry_pending(self, device, pending: dict[int, _PendingAck]) -> None:
@@ -332,12 +382,16 @@ class SerialDeviceLink:
                         MessageType.STREAM_START,
                         self._desired_stream.pack(),
                         ack_required=True,
+                        stream_revision=self._stream_revision,
                     )
             return
         if message_type is MessageType.COMMAND_ACK:
             if len(frame.payload) != ACK.size:
                 return
             acked_type_value, result, detail, acked_sequence = ACK.unpack(frame.payload)
+            item = pending.get(acked_sequence)
+            if item is None or int(item.message_type) != acked_type_value:
+                return
             pending.pop(acked_sequence, None)
             try:
                 acked_type = MessageType(acked_type_value)
@@ -349,7 +403,10 @@ class SerialDeviceLink:
                         f"device rejected command {acked_type_value:#x}: {detail}"
                     )
                 elif acked_type is MessageType.STREAM_START:
-                    self._stream_ready = True
+                    self._stream_ready = (
+                        self._desired_stream is not None
+                        and item.stream_revision == self._stream_revision
+                    )
                 elif acked_type is MessageType.STREAM_STOP:
                     self._stream_ready = False
                 self._last_response = f"ACK {acked_type_value:#x} result={result}"
@@ -357,6 +414,7 @@ class SerialDeviceLink:
         if message_type is MessageType.STATUS:
             status = DeviceStatusPayload.unpack(frame.payload)
             with self._condition:
+                self._last_status_received_at = time.monotonic()
                 self._audio_status = AudioStreamTelemetry(
                     state=status.state,
                     muted=status.muted,
@@ -371,7 +429,11 @@ class SerialDeviceLink:
                 )
                 self._last_response = (
                     f"audio={status.state.name} buffer="
-                    f"{status.buffer_fill_samples}/{status.buffer_capacity_samples}"
+                    f"{status.buffer_fill_samples}/{status.buffer_capacity_samples} "
+                    f"under={status.underrun_count} over={status.overrun_count} "
+                    f"crc={status.crc_error_count} gap={status.sequence_gap_count} "
+                    f"skip={status.timer_skipped_samples} "
+                    f"host_drop={self._host_tx_overrun_count}"
                 )
             return
         if message_type is MessageType.ERROR:

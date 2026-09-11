@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from ..domain.audio import AudioModeSettings
+
 
 @dataclass(frozen=True)
 class MainWindowViewModel:
@@ -18,3 +20,9 @@ class MainWindowViewModel:
     start_enabled: bool
     stop_enabled: bool
     manual_enabled: bool
+    audio_state_text: str
+    audio_detail: str
+    audio_settings: AudioModeSettings
+    audio_start_enabled: bool
+    audio_stop_enabled: bool
+    audio_controls_enabled: bool

@@ -1,16 +1,21 @@
 """Golden behavior for the versioned COBS/CRC device protocol."""
 
 import sys
+import io
+import json
 import threading
 import time
 import types
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from vision_gimbal.config.schema import SerialConfig
+from vision_gimbal.config.schema import AppConfig, SerialConfig
 from vision_gimbal.domain.audio import AudioPacket
 from vision_gimbal.infrastructure.serial_device_link import SerialDeviceLink
 from vision_gimbal.protocol.frame_codec import (
@@ -25,9 +30,11 @@ from vision_gimbal.protocol.frame_codec import (
 from vision_gimbal.protocol.messages import (
     ACK,
     HELLO_ACK,
+    STATUS,
     FrameFlags,
     MessageType,
     StreamStart,
+    StreamState,
     pack_gimbal_setpoint,
 )
 
@@ -154,6 +161,110 @@ class _ProtocolSerial:
 
 
 class SerialDeviceLinkTests(unittest.TestCase):
+    def test_obsolete_start_ack_cannot_enable_restarted_stream_early(self):
+        class Writer:
+            def write(self, data):
+                return len(data)
+
+        link = SerialDeviceLink(SerialConfig(port="TEST"))
+        link._session_id = 9
+        link._protocol_ready = True
+        link._connected = True
+        pending = {}
+
+        old = StreamStart()
+        new = StreamStart()
+        link.start_audio_stream(old)
+        link._send_outbound(Writer(), link._take_outbound(), pending)
+        link.start_audio_stream(new)
+
+        link._handle_frame(
+            Frame(
+                MessageType.COMMAND_ACK,
+                ACK.pack(MessageType.STREAM_START, 0, 0, 0),
+                session_id=9,
+            ),
+            pending,
+        )
+        self.assertFalse(link.stream_ready)
+
+        link._send_outbound(Writer(), link._take_outbound(), pending)
+        link._handle_frame(
+            Frame(
+                MessageType.COMMAND_ACK,
+                ACK.pack(MessageType.STREAM_START, 0, 0, 1),
+                session_id=9,
+            ),
+            pending,
+        )
+        self.assertTrue(link.stream_ready)
+
+    def test_status_age_distinguishes_no_status_from_stale_status(self):
+        link = SerialDeviceLink(SerialConfig(port="TEST"))
+        self.assertIsNone(link.audio_status().status_age_ms)
+        frame = Frame(
+            MessageType.STATUS,
+            STATUS.pack(StreamState.PLAYING, 0, 0, 480, 2048, 1, 2, 3, 4, 5, 6, 0),
+        )
+        with patch("vision_gimbal.infrastructure.serial_device_link.time.monotonic", return_value=10.0):
+            link._handle_frame(frame, {})
+        with patch("vision_gimbal.infrastructure.serial_device_link.time.monotonic", return_value=10.25):
+            status = link.audio_status()
+        self.assertEqual(status.status_age_ms, 250)
+        self.assertEqual(status.crc_error_count, 3)
+        self.assertEqual(status.timer_skipped_samples, 5)
+        self.assertIn("gap=4", link.serial_status().last_response)
+
+    def test_lost_start_ack_does_not_restart_stream_after_mute_ack(self):
+        class LostStartAckSerial(_ProtocolSerial):
+            """Model the firmware's one-entry duplicate ACK cache."""
+
+            def __init__(self):
+                super().__init__()
+                self.last_command = None
+                self.start_executions = 0
+                self.dropped = False
+
+            def _respond(self, request, message_type, payload):
+                if message_type == MessageType.COMMAND_ACK:
+                    command = (request.message_type, request.sequence)
+                    if command != self.last_command:
+                        if request.message_type == MessageType.STREAM_START:
+                            self.start_executions += 1
+                        self.last_command = command
+                    if request.message_type == MessageType.STREAM_START and not self.dropped:
+                        self.dropped = True
+                        return
+                super()._respond(request, message_type, payload)
+
+        fake = LostStartAckSerial()
+        original_serial = sys.modules.get("serial")
+        sys.modules["serial"] = types.SimpleNamespace(Serial=lambda **_: fake)
+        link = SerialDeviceLink(SerialConfig(port="TEST", startup_delay_s=0.0))
+        try:
+            link.start()
+            deadline = time.monotonic() + 1.0
+            while not link.serial_status().connected and time.monotonic() < deadline:
+                time.sleep(0.005)
+            self.assertTrue(link.serial_status().connected)
+            link.start_audio_stream(StreamStart())
+            link.set_mute(False)
+            link.send_audio(AudioPacket(0, bytes(range(160))))
+            deadline = time.monotonic() + 1.0
+            while (
+                not fake.audio_payloads or MessageType.SET_MUTE not in fake.received_types
+            ) and time.monotonic() < deadline:
+                time.sleep(0.005)
+            self.assertEqual(fake.audio_payloads, [bytes(range(160))])
+            self.assertTrue(fake.dropped)
+            self.assertEqual(fake.start_executions, 1)
+        finally:
+            link.close()
+            if original_serial is None:
+                sys.modules.pop("serial", None)
+            else:
+                sys.modules["serial"] = original_serial
+
     def test_handshake_stream_ack_and_audio_send(self):
         fake = _ProtocolSerial()
         original_serial = sys.modules.get("serial")
@@ -185,6 +296,53 @@ class SerialDeviceLinkTests(unittest.TestCase):
                 sys.modules.pop("serial", None)
             else:
                 sys.modules["serial"] = original_serial
+
+
+class AudioStreamProbeTests(unittest.TestCase):
+    def test_probe_sends_exact_header_bytes_and_selected_modes(self):
+        sys.path.insert(0, str(SRC_DIR.parent / "utils"))
+        import audio_stream_probe as probe
+
+        class StatusSerial(_ProtocolSerial):
+            def __init__(self):
+                super().__init__()
+                self.parameters = None
+
+            def _respond(self, request, message_type, payload):
+                super()._respond(request, message_type, payload)
+                if request.message_type == MessageType.STREAM_START:
+                    self.parameters = StreamStart.unpack(request.payload)
+                    super()._respond(request, MessageType.STATUS, STATUS.pack(
+                        StreamState.PLAYING, 0, 0, 480, 2048, 0, 0, 0, 0, 0, 0, 0,
+                    ))
+
+        samples = bytes(range(256)) + bytes([0, 128, 255])
+        fake = StatusSerial()
+        with TemporaryDirectory() as folder:
+            header = Path(folder) / "audio_data.h"
+            header.write_text(
+                "static constexpr uint32_t kAudioSampleRate = 8000;\n"
+                "static constexpr uint8_t kAudioSamples[] PROGMEM = {"
+                + ",".join(map(str, samples)) + ",};", encoding="utf-8",
+            )
+            log_path = Path(folder) / "probe.jsonl"
+            with patch.dict(sys.modules, serial=types.SimpleNamespace(Serial=lambda **_: fake)), \
+                 patch.object(probe, "load_config", return_value=AppConfig(
+                     serial=SerialConfig(startup_delay_s=0.0))), redirect_stdout(io.StringIO()):
+                result = probe.main([
+                    "--serial-port", "TEST", "--audio-header", str(header),
+                    "--repeats", "1", "--processing", "loud", "--drive", "boost",
+                    "--log-jsonl", str(log_path),
+                ])
+            self.assertEqual(result, 0)
+            transmitted = b"".join(fake.audio_payloads)
+            self.assertEqual(transmitted, samples + bytes([128]) * (2048 + 160))
+            self.assertEqual(int(fake.parameters.processing), 1)
+            self.assertEqual(int(fake.parameters.drive), 1)
+            records = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(records[-1]["host_sent_samples"], len(transmitted))
+            self.assertEqual(records[-1]["host_tx_overrun_count"], 0)
+            self.assertEqual(records[-1]["timer_skipped_samples"], 0)
 
 
 if __name__ == "__main__":

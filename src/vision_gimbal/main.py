@@ -16,7 +16,7 @@ def _project_root() -> Path:
 
 
 def _parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="视觉云台跟踪系统")
+    parser = argparse.ArgumentParser(description="视觉云台与超声音频控制系统")
     parser.add_argument(
         "--config",
         type=Path,

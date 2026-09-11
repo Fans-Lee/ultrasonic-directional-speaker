@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .audio import AudioControlStatus
 from .control import AutoControlTelemetry, ControlSource, SerialLinkStatus
 from .geometry import GimbalPose, Point
 from .intents import ManualDirection
@@ -46,6 +47,7 @@ class UiSnapshot:
     aim_center: Point | None = None
     selected_target_available: bool = False
     message: str = ""
+    audio: AudioControlStatus = field(default_factory=AudioControlStatus)
 
     @property
     def manual_enabled(self) -> bool:

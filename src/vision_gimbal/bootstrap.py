@@ -9,6 +9,7 @@ from .application.runtime import ApplicationRuntime
 from .application.tracking_session import TrackingSession
 from .application.vision_service import VisionService
 from .audio.preprocessor import AudioPreprocessor
+from .audio.spectrum import RealtimeSpectrumAnalyzer
 from .config.schema import AppConfig
 from .control.auto_tracking import AutoTrackingController
 from .control.camera_projection import CameraProjection
@@ -37,8 +38,6 @@ class ApplicationBundle:
 
 
 def build_application(config: AppConfig) -> ApplicationBundle:
-    if config.audio.enabled and not config.serial.port:
-        raise ValueError("audio streaming requires serial.port to be configured")
     clock = SystemClock()
     snapshots = LatestSnapshotStore()
     camera = OpenCVCamera(config.camera)
@@ -72,6 +71,10 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         SoundDeviceMicrophone(config.audio.capture),
         AudioPreprocessor(config.audio.capture, config.audio.dsp, config.audio.stream),
         device_link,
+        RealtimeSpectrumAnalyzer(
+            config.audio.spectrum,
+            config.audio.stream.sample_rate,
+        ),
     )
     application = ApplicationRuntime(
         vision_service,
@@ -80,9 +83,13 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         device_link=device_link,
     )
     runtime = QtApplicationRuntime(application, config.runtime.control_hz)
-    window = MainWindow(config.ui)
+    window = MainWindow(
+        config.ui,
+        spectrum_enabled=config.audio.enabled and config.audio.spectrum.enabled,
+    )
     window.intent_emitted.connect(runtime.submit)
     runtime.frame_ready.connect(window.apply_display_frame)
     runtime.state_ready.connect(window.apply_ui_snapshot)
+    runtime.spectrum_ready.connect(window.apply_spectrum_snapshot)
     runtime.failed.connect(window.show_runtime_error)
     return ApplicationBundle(window, runtime, tracker.device)

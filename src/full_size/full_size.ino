@@ -17,6 +17,12 @@ void reportStartupError(const char* stage, esp_err_t error) {
 }  // namespace
 
 void setup() {
+#if !ARDUINO_USB_CDC_ON_BOOT
+  // HardwareSerial defaults to 256 bytes, barely more than one 185-byte
+  // AUDIO_DATA frame. Leave room for queued host packets and control-task jitter.
+  // This UART ring is separate from the 2048-sample decoded audio buffer.
+  Serial.setRxBufferSize(4096);
+#endif
   Serial.begin(460800);
   delay(300);
 
