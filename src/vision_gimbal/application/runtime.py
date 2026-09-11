@@ -1,5 +1,9 @@
 """Framework-neutral lifecycle for vision, control, audio, and the device link."""
 
+import queue
+from dataclasses import replace
+
+from ..domain.intents import ConfigureAudio, StartAudio, StopAudio
 from .control_service import ControlService
 from .vision_service import VisionService
 
@@ -17,6 +21,20 @@ class ApplicationRuntime:
         self.audio = audio
         self.device_link = device_link
         self._started = False
+        self._audio_intents = queue.Queue()
+
+    def submit(self, intent) -> None:
+        if isinstance(intent, (StartAudio, StopAudio, ConfigureAudio)):
+            self._audio_intents.put(intent)
+            return
+        self.control.submit(intent)
+
+    def tick(self):
+        self._drain_audio_intents()
+        snapshot = self.control.tick()
+        if self.audio is None:
+            return snapshot
+        return replace(snapshot, audio=self.audio.control_status())
 
     def start(self) -> None:
         if self._started:
@@ -48,3 +66,21 @@ class ApplicationRuntime:
         if self.device_link is not None:
             self.device_link.close()
         self._started = False
+
+    def _drain_audio_intents(self) -> None:
+        while True:
+            try:
+                intent = self._audio_intents.get_nowait()
+            except queue.Empty:
+                return
+            if self.audio is None:
+                continue
+            try:
+                if isinstance(intent, StartAudio):
+                    self.audio.start_transmitting()
+                elif isinstance(intent, StopAudio):
+                    self.audio.stop_transmitting()
+                elif isinstance(intent, ConfigureAudio):
+                    self.audio.configure(intent.settings)
+            except Exception as error:  # noqa: BLE001 - user-action boundary
+                self.audio.record_error(error)

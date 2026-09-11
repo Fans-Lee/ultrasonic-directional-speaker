@@ -265,6 +265,9 @@ class AudioStreamConfig:
     device_buffer_ms: int = 256
     data_timeout_ms: int = 100
     host_queue_packets: int = 8
+    processing: str = "raw"
+    boost: bool = False
+    modulation: str = "dsb_am"
 
     def __post_init__(self) -> None:
         if self.sample_rate != 8000:
@@ -277,6 +280,17 @@ class AudioStreamConfig:
             raise ValueError("audio data timeout must cover one packet")
         if self.host_queue_packets <= 0:
             raise ValueError("audio host queue must be positive")
+        if not isinstance(self.processing, str) or self.processing.lower() not in {
+            "raw",
+            "loud",
+        }:
+            raise ValueError("audio.stream.processing must be raw or loud")
+        if not isinstance(self.boost, bool):
+            raise ValueError("audio.stream.boost must be true or false")
+        if not isinstance(self.modulation, str) or self.modulation.lower().replace(
+            "-", "_"
+        ) not in {"dsb_am", "sram"}:
+            raise ValueError("audio.stream.modulation must be dsb_am or sram")
 
     @property
     def packet_samples(self) -> int:
@@ -288,12 +302,50 @@ class AudioStreamConfig:
 
 
 @dataclass(frozen=True)
+class AudioRecordingConfig:
+    enabled: bool = False
+    path: str = "output/audio_recordings/post_limiter_{timestamp}.wav"
+
+    def __post_init__(self) -> None:
+        if not self.path.strip():
+            raise ValueError("audio recording path cannot be empty")
+        if not self.path.lower().endswith(".wav"):
+            raise ValueError("audio recording path must end with .wav")
+
+
+@dataclass(frozen=True)
+class AudioSpectrumConfig:
+    enabled: bool = True
+    window_ms: float = 40.0
+    hop_ms: float = 20.0
+    history_s: float = 6.0
+    refresh_hz: float = 10.0
+    min_dbfs: float = -80.0
+    max_dbfs: float = 0.0
+    queue_blocks: int = 4
+
+    def __post_init__(self) -> None:
+        if self.window_ms <= 0.0 or not 0.0 < self.hop_ms <= self.window_ms:
+            raise ValueError("audio spectrum must satisfy 0 < hop_ms <= window_ms")
+        if self.history_s < self.hop_ms / 1000.0:
+            raise ValueError("audio spectrum history must hold at least one hop")
+        if not 0.0 < self.refresh_hz <= 30.0:
+            raise ValueError("audio spectrum refresh_hz must be in (0, 30]")
+        if self.min_dbfs >= self.max_dbfs or self.max_dbfs > 0.0:
+            raise ValueError("audio spectrum dBFS range must satisfy min < max <= 0")
+        if self.queue_blocks <= 0:
+            raise ValueError("audio spectrum queue_blocks must be positive")
+
+
+@dataclass(frozen=True)
 class AudioConfig:
     enabled: bool = False
     auto_start: bool = True
     capture: AudioCaptureConfig = field(default_factory=AudioCaptureConfig)
     dsp: AudioDspConfig = field(default_factory=AudioDspConfig)
     stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
+    recording: AudioRecordingConfig = field(default_factory=AudioRecordingConfig)
+    spectrum: AudioSpectrumConfig = field(default_factory=AudioSpectrumConfig)
 
 
 @dataclass(frozen=True)
@@ -307,7 +359,7 @@ class RuntimeConfig:
 
 @dataclass(frozen=True)
 class UiConfig:
-    window_title: str = "视觉云台跟踪系统"
+    window_title: str = "视觉云台与超声音频控制系统"
     initial_width: int = 1280
     initial_height: int = 760
 

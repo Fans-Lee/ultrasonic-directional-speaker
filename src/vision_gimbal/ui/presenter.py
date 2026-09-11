@@ -1,5 +1,6 @@
 """Map domain state to Chinese UI labels and enabled states."""
 
+from ..domain.audio import AudioModeSettings
 from ..domain.state import ControlMode, TargetStatus, UiSnapshot
 from .view_models import MainWindowViewModel
 
@@ -27,6 +28,37 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         serial_text = "串口重连中"
         serial_detail = snapshot.serial.last_error or "等待设备"
 
+    audio = snapshot.audio
+    settings = AudioModeSettings(
+        processing=audio.settings.processing,
+        drive=audio.settings.drive,
+        modulation=audio.settings.modulation,
+    )
+    telemetry = audio.telemetry
+    if not audio.enabled:
+        audio_state_text = "配置已禁用"
+    elif audio.transmitting and snapshot.serial.connected:
+        audio_state_text = "传输中" if audio.microphone_open else "启动中"
+    elif audio.transmitting:
+        audio_state_text = "串口重连中"
+    elif snapshot.serial.connected:
+        audio_state_text = "已关闭"
+    else:
+        audio_state_text = "等待串口"
+    mode_text = (
+        f"{settings.processing.value.upper()} / "
+        f"{'BOOST' if settings.drive.value == 'boost' else 'STANDARD'} / "
+        f"{'DSB-AM' if settings.modulation.value == 'dsb_am' else 'SRAM'}"
+    )
+    audio_detail = (
+        f"{mode_text} · ESP32 {telemetry.state.name} · "
+        f"缓冲 {telemetry.buffer_fill_samples}/{telemetry.buffer_capacity_samples} · "
+        f"欠载 {telemetry.underrun_count} · 主机丢包 "
+        f"{telemetry.host_tx_overrun_count + telemetry.host_capture_overrun_count}"
+    )
+    if audio.last_error:
+        audio_detail += f"\n错误：{audio.last_error}"
+
     return MainWindowViewModel(
         mode_text="自动追踪" if automatic else "停止追踪 / 手动控制",
         selected_target_text=("无" if selected is None else f"ID {selected}"),
@@ -48,4 +80,12 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         ),
         stop_enabled=automatic,
         manual_enabled=not automatic,
+        audio_state_text=audio_state_text,
+        audio_detail=audio_detail,
+        audio_settings=settings,
+        audio_start_enabled=(
+            audio.enabled and snapshot.serial.connected and not audio.transmitting
+        ),
+        audio_stop_enabled=audio.transmitting,
+        audio_controls_enabled=audio.enabled,
     )

@@ -92,8 +92,8 @@ reconnect_interval_s = 1.0
 startup_delay_s = 0.8
 
 [audio]
-enabled = false
-auto_start = true
+enabled = true
+auto_start = false
 
 [audio.capture]
 device = ""
@@ -107,8 +107,8 @@ highpass_hz = 250.0
 lowpass_hz = 3000.0
 measured_eq_enabled = false
 eq_max_boost_db = 6.0
-level_target_dbfs = -20.0
-level_max_gain_db = 12.0
+level_target_dbfs = -8.0
+level_max_gain_db = 30.0
 level_attack_ms = 50.0
 level_release_ms = 500.0
 level_freeze_below_dbfs = -55.0
@@ -125,11 +125,28 @@ prebuffer_ms = 60
 device_buffer_ms = 256
 data_timeout_ms = 100
 host_queue_packets = 8
+processing = "raw"
+boost = false
+modulation = "dsb_am"
+
+[audio.recording]
+enabled = false
+path = "../output/audio_recordings/post_limiter_{timestamp}.wav"
+
+[audio.spectrum]
+enabled = true
+window_ms = 40.0
+hop_ms = 20.0
+history_s = 6.0
+refresh_hz = 10.0
+min_dbfs = -80.0
+max_dbfs = 0.0
+queue_blocks = 4
 
 [runtime]
 control_hz = 10.0
 
 [ui]
-window_title = "视觉云台跟踪系统"
+window_title = "视觉云台与超声音频控制系统"
 initial_width = 1280
 initial_height = 760

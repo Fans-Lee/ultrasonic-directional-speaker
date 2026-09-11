@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from .audio import AudioModeSettings
+
 
 class ManualDirection(str, Enum):
     LEFT = "left"
@@ -32,6 +34,21 @@ class StopTracking(UserIntent):
 
 
 @dataclass(frozen=True)
+class StartAudio(UserIntent):
+    pass
+
+
+@dataclass(frozen=True)
+class StopAudio(UserIntent):
+    pass
+
+
+@dataclass(frozen=True)
+class ConfigureAudio(UserIntent):
+    settings: AudioModeSettings
+
+
+@dataclass(frozen=True)
 class ManualKeyChanged(UserIntent):
     direction: ManualDirection
     pressed: bool
@@ -51,6 +68,9 @@ Intent = (
     SelectTarget
     | StartTracking
     | StopTracking
+    | StartAudio
+    | StopAudio
+    | ConfigureAudio
     | ManualKeyChanged
     | ClearManualKeys
     | ShutdownRequested

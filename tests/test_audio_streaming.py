@@ -4,8 +4,10 @@ import math
 import sys
 import time
 import unittest
+import wave
 from dataclasses import replace
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
@@ -14,32 +16,51 @@ sys.path.insert(0, str(SRC_DIR))
 
 from vision_gimbal.application.audio_service import AudioService
 from vision_gimbal.audio.preprocessor import AudioPreprocessor
+from vision_gimbal.audio.recording import PostLimiterWavRecorder
 from vision_gimbal.audio.resampler import StreamingLinearResampler
-from vision_gimbal.config.schema import AudioConfig
-from vision_gimbal.domain.audio import AudioStreamTelemetry
-from vision_gimbal.protocol.messages import StreamStart
+from vision_gimbal.config.loader import load_config
+from vision_gimbal.config.schema import AudioConfig, AudioRecordingConfig
+from vision_gimbal.domain.audio import (
+    AudioDriveMode,
+    AudioModeSettings,
+    AudioModulationMode,
+    AudioProcessingMode,
+    AudioStreamTelemetry,
+)
+from vision_gimbal.protocol.messages import (
+    AudioDrive,
+    AudioModulation,
+    AudioProcessing,
+    StreamStart,
+)
 
 
 class _Microphone:
     def __init__(self) -> None:
         self.callback = None
+        self.start_count = 0
+        self.close_count = 0
 
     def start(self, callback) -> None:
         self.callback = callback
+        self.start_count += 1
 
     def close(self) -> None:
         self.callback = None
+        self.close_count += 1
 
 
 class _DeviceLink:
     def __init__(self) -> None:
         self.parameters = None
+        self.parameter_history = []
         self.packets = []
         self.mutes = []
         self.stopped = False
 
     def start_audio_stream(self, parameters: StreamStart) -> None:
         self.parameters = parameters
+        self.parameter_history.append(parameters)
 
     def send_audio(self, packet) -> None:
         self.packets.append(packet)
@@ -52,6 +73,36 @@ class _DeviceLink:
 
     def audio_status(self) -> AudioStreamTelemetry:
         return AudioStreamTelemetry()
+
+
+class _SpectrumAnalyzer:
+    enabled = True
+    refresh_hz = 10.0
+
+    def __init__(self) -> None:
+        self.start_count = 0
+        self.activate_count = 0
+        self.deactivate_count = 0
+        self.close_count = 0
+        self.blocks = []
+
+    def start(self) -> None:
+        self.start_count += 1
+
+    def activate(self) -> None:
+        self.activate_count += 1
+
+    def deactivate(self) -> None:
+        self.deactivate_count += 1
+
+    def submit(self, samples) -> None:
+        self.blocks.append(np.asarray(samples).copy())
+
+    def snapshot(self):
+        return None
+
+    def close(self) -> None:
+        self.close_count += 1
 
 
 class StreamingResamplerTests(unittest.TestCase):
@@ -80,6 +131,7 @@ class AudioPreprocessorTests(unittest.TestCase):
         stereo = np.column_stack((mono, mono)).astype(np.float32)
         result = processor.process(stereo)
         self.assertEqual(len(result.samples), 80)
+        self.assertEqual(result.post_limiter_samples.size, 80)
         self.assertTrue(all(0 <= value <= 255 for value in result.samples))
 
     def test_dc_input_decays_toward_silence_code(self):
@@ -95,6 +147,65 @@ class AudioPreprocessorTests(unittest.TestCase):
 
 
 class AudioServiceTests(unittest.TestCase):
+    def test_audio_mode_settings_normalize_string_values_from_qt(self):
+        settings = AudioModeSettings(
+            processing="loud",
+            drive="boost",
+            modulation="sram",
+        )
+
+        self.assertIs(settings.processing, AudioProcessingMode.LOUD)
+        self.assertIs(settings.drive, AudioDriveMode.BOOST)
+        self.assertIs(settings.modulation, AudioModulationMode.SRAM)
+
+    def test_manual_start_stop_and_live_mode_change_own_microphone_lifecycle(self):
+        stream = replace(
+            AudioConfig().stream,
+            processing="loud",
+            boost=True,
+            modulation="sram",
+        )
+        config = replace(
+            AudioConfig(enabled=True), auto_start=False, stream=stream
+        )
+        microphone = _Microphone()
+        link = _DeviceLink()
+        service = AudioService(
+            config,
+            microphone,
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+        )
+
+        service.start()
+        self.assertIsNone(microphone.callback)
+        self.assertFalse(service.control_status().transmitting)
+
+        service.start_transmitting()
+        self.assertIsNotNone(microphone.callback)
+        self.assertEqual(link.parameters.processing, AudioProcessing.LOUD)
+        self.assertEqual(link.parameters.drive, AudioDrive.BOOST)
+        self.assertEqual(link.parameters.modulation, AudioModulation.SRAM)
+
+        service.configure(
+            AudioModeSettings(
+                processing=AudioProcessingMode.RAW,
+                drive=AudioDriveMode.STANDARD,
+                modulation=AudioModulationMode.DSB_AM,
+            )
+        )
+        self.assertEqual(len(link.parameter_history), 2)
+        self.assertEqual(link.parameters.processing, AudioProcessing.RAW)
+        self.assertEqual(link.parameters.drive, AudioDrive.STANDARD)
+        self.assertEqual(link.parameters.modulation, AudioModulation.DSB_AM)
+        self.assertEqual(microphone.start_count, 2)
+
+        service.stop_transmitting()
+        self.assertIsNone(microphone.callback)
+        self.assertFalse(service.control_status().microphone_open)
+        self.assertTrue(link.stopped)
+        service.close()
+
     def test_two_capture_blocks_form_one_protocol_packet(self):
         config = replace(AudioConfig(enabled=True), auto_start=True)
         microphone = _Microphone()
@@ -123,6 +234,103 @@ class AudioServiceTests(unittest.TestCase):
         self.assertEqual(link.mutes[0], False)
         self.assertEqual(link.mutes[-1], True)
         self.assertTrue(link.stopped)
+
+    def test_spectrum_tap_follows_audio_lifecycle(self):
+        config = replace(AudioConfig(enabled=True), auto_start=True)
+        microphone = _Microphone()
+        link = _DeviceLink()
+        spectrum = _SpectrumAnalyzer()
+        service = AudioService(
+            config,
+            microphone,
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+            spectrum,
+        )
+
+        service.start()
+        microphone.callback(np.zeros((480, 1), dtype=np.float32))
+        microphone.callback(np.zeros((480, 1), dtype=np.float32))
+        deadline = time.monotonic() + 1.0
+        while not spectrum.blocks and time.monotonic() < deadline:
+            time.sleep(0.01)
+        service.close()
+
+        self.assertEqual(spectrum.start_count, 1)
+        self.assertEqual(spectrum.activate_count, 1)
+        self.assertTrue(spectrum.blocks)
+        self.assertEqual(spectrum.blocks[0].size, 80)
+        self.assertGreaterEqual(spectrum.deactivate_count, 1)
+        self.assertEqual(spectrum.close_count, 1)
+
+    def test_records_post_limiter_signal_as_pcm16_wav(self):
+        with TemporaryDirectory() as directory:
+            recording = AudioRecordingConfig(
+                enabled=True,
+                path=str(Path(directory) / "processed_{timestamp}.wav"),
+            )
+            config = replace(
+                AudioConfig(enabled=True), auto_start=True, recording=recording
+            )
+            microphone = _Microphone()
+            link = _DeviceLink()
+            service = AudioService(
+                config,
+                microphone,
+                AudioPreprocessor(config.capture, config.dsp, config.stream),
+                link,
+            )
+
+            service.start()
+            block = np.zeros((480, 1), dtype=np.float32)
+            microphone.callback(block)
+            microphone.callback(block)
+            deadline = time.monotonic() + 1.0
+            while not link.packets and time.monotonic() < deadline:
+                time.sleep(0.01)
+            recording_path = service.recording_path
+            service.close()
+
+            self.assertIsNotNone(recording_path)
+            self.assertTrue(recording_path.exists())
+            with wave.open(str(recording_path), "rb") as stream:
+                self.assertEqual(stream.getnchannels(), 1)
+                self.assertEqual(stream.getsampwidth(), 2)
+                self.assertEqual(stream.getframerate(), 8000)
+                self.assertEqual(stream.getnframes(), 160)
+
+
+class PostLimiterWavRecorderTests(unittest.TestCase):
+    def test_converts_normalized_float_samples_to_pcm16(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "monitor.wav"
+            recorder = PostLimiterWavRecorder(
+                AudioRecordingConfig(enabled=True, path=str(path)), 8000
+            )
+            self.assertEqual(recorder.start(), path)
+            recorder.write(np.array([-0.5, 0.0, 0.5], dtype=np.float32))
+            recorder.close()
+
+            with wave.open(str(path), "rb") as stream:
+                frames = stream.readframes(stream.getnframes())
+            values = np.frombuffer(frames, dtype="<i2")
+            np.testing.assert_array_equal(values, [-16384, 0, 16384])
+
+    def test_loader_resolves_recording_path_from_config_directory(self):
+        with TemporaryDirectory() as directory:
+            config_path = Path(directory) / "app.toml"
+            config_path.write_text(
+                '[audio.recording]\nenabled = true\npath = "records/test.wav"\n',
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+
+            self.assertTrue(config.audio.recording.enabled)
+            self.assertEqual(
+                Path(config.audio.recording.path),
+                (config_path.parent / "records" / "test.wav").resolve(),
+            )
 
 
 if __name__ == "__main__":

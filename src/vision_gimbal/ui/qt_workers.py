@@ -75,6 +75,7 @@ class ControlWorker(QObject):
 class QtApplicationRuntime(QObject):
     frame_ready = Signal(object)
     state_ready = Signal(object)
+    spectrum_ready = Signal(object)
     failed = Signal(str)
 
     def __init__(
@@ -95,10 +96,15 @@ class QtApplicationRuntime(QObject):
         self._display_timer = QTimer(self)
         self._display_timer.setInterval(33)
         self._display_timer.timeout.connect(self._publish_latest_frame)
+        self._last_spectrum_sequence = -1
+        self._spectrum_timer = QTimer(self)
+        refresh_hz = getattr(application.audio, "spectrum_refresh_hz", 10.0)
+        self._spectrum_timer.setInterval(max(1, round(1000.0 / refresh_hz)))
+        self._spectrum_timer.timeout.connect(self._publish_latest_spectrum)
         self._started = False
 
     def submit(self, intent) -> None:
-        self.application.control.submit(intent)
+        self.application.submit(intent)
 
     def start(self) -> None:
         if self._started:
@@ -119,7 +125,7 @@ class QtApplicationRuntime(QObject):
         self._control_thread = QThread(self)
         interval_ms = max(1, round(1000.0 / self.control_hz))
         self._control_worker = ControlWorker(
-            self.application.control,
+            self.application,
             interval_ms,
         )
         self._control_worker.moveToThread(self._control_thread)
@@ -131,10 +137,12 @@ class QtApplicationRuntime(QObject):
         self._vision_thread.start()
         self._control_thread.start()
         self._display_timer.start()
+        if callable(getattr(self.application.audio, "spectrum_snapshot", None)):
+            self._spectrum_timer.start()
 
     @Slot(str)
     def _worker_failed(self, message: str) -> None:
-        self.application.control.submit(StopTracking())
+        self.application.submit(StopTracking())
         self.failed.emit(message)
 
     @Slot()
@@ -147,10 +155,22 @@ class QtApplicationRuntime(QObject):
             self._last_displayed_frame_id = display.snapshot.frame_id
             self.frame_ready.emit(display)
 
+    @Slot()
+    def _publish_latest_spectrum(self) -> None:
+        source = getattr(self.application.audio, "spectrum_snapshot", None)
+        if not callable(source):
+            return
+        snapshot = source()
+        if snapshot is None or snapshot.sequence == self._last_spectrum_sequence:
+            return
+        self._last_spectrum_sequence = snapshot.sequence
+        self.spectrum_ready.emit(snapshot)
+
     def stop(self) -> None:
         if not self._started:
             return
         self._display_timer.stop()
+        self._spectrum_timer.stop()
         if self._vision_worker is not None:
             self._vision_worker.request_stop()
         if self._control_worker is not None:
@@ -169,4 +189,5 @@ class QtApplicationRuntime(QObject):
             self._vision_thread.wait()
         self.application.close()
         self._display_frames.clear()
+        self._last_spectrum_sequence = -1
         self._started = False
