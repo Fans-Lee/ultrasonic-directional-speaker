@@ -27,15 +27,19 @@ class VisionService:
         pipeline: VisionPipeline,
         clock: Clock,
         snapshots: LatestSnapshotStore[VisionSnapshot],
+        spatial=None,
     ) -> None:
         self.camera = camera
         self.pipeline = pipeline
         self.clock = clock
         self.snapshots = snapshots
+        self.spatial = spatial
         self._frame_id = 0
 
     def start(self) -> None:
         self.camera.open()
+        if self.spatial is not None:
+            self.spatial.start()
 
     def step(self) -> DisplayFrame:
         image = self.camera.read()
@@ -49,9 +53,18 @@ class VisionService:
             captured_at,
         )
         self.snapshots.set(snapshot)
+        if self.spatial is not None:
+            self.spatial.submit(image, snapshot)
         return DisplayFrame(image=image, snapshot=snapshot)
 
+    def spatial_snapshot(self):
+        if self.spatial is None:
+            return None
+        return self.spatial.snapshot()
+
     def close(self) -> None:
+        if self.spatial is not None:
+            self.spatial.close()
         self.camera.close()
         self.pipeline.reset()
         self.snapshots.clear()

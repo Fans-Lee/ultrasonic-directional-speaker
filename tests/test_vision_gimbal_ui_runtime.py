@@ -41,7 +41,9 @@ from vision_gimbal.domain.tracking import VisionSnapshot
 from vision_gimbal.ui.qt_workers import QtApplicationRuntime
 from vision_gimbal.ui.audio_panel import AudioPanel
 from vision_gimbal.ui.presenter import present
+from vision_gimbal.ui.sound_field_panel import SoundFieldPanel
 from vision_gimbal.ui.spectrum_panel import SpectrumPanel
+from vision_gimbal.domain.spatial_field import SpatialFieldSnapshot
 
 
 class _FakeVisionService:
@@ -262,6 +264,32 @@ class QtApplicationRuntimeTests(unittest.TestCase):
 
         self.assertIn("峰值 -12.0 dBFS", panel.status.text())
         self.assertFalse(panel.canvas._image.isNull())
+
+    def test_sound_field_panel_is_separate_from_tracking_video(self):
+        panel = SoundFieldPanel()
+        source = np.full((72, 128, 3), (10, 20, 30), dtype=np.uint8)
+        field = SpatialFieldSnapshot(
+            sequence=1,
+            frame_id=7,
+            captured_at=time.monotonic(),
+            completed_at=time.monotonic(),
+            source_size=(128, 72),
+            depth_m=np.full((18, 32), np.nan, dtype=np.float32),
+            intensity_db_relative=np.full(
+                (18, 32), np.nan, dtype=np.float32
+            ),
+            inference_ms=12.0,
+            dropped_frames=0,
+            source_frame_bgr=source,
+            active=False,
+            status="运行中",
+        )
+
+        panel.set_spatial_field_snapshot(field)
+
+        self.assertIsNotNone(panel.canvas._pixmap)
+        color = panel.canvas._pixmap.toImage().pixelColor(0, 0)
+        self.assertEqual((color.red(), color.green(), color.blue()), (30, 20, 10))
 
 
 if __name__ == "__main__":

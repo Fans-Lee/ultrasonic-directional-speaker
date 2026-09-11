@@ -5,6 +5,18 @@ width = 1280
 height = 720
 fps = 30
 
+[camera.calibration]
+# These values were calibrated at 1920x1080. They are scaled automatically
+# when the camera is configured for another resolution.
+reference_width = 1920
+reference_height = 1080
+fx = 1450.0
+fy = 1450.0
+cx = 960.0
+cy = 540.0
+# OpenCV order: k1, k2, p1, p2, k3
+distortion = [0.0, 0.0, 0.0, 0.0, 0.0]
+
 [vision]
 model_path = "../yolo26s.pt"
 tracker_config_path = "bytetrack_person.yaml"
@@ -142,6 +154,53 @@ refresh_hz = 10.0
 min_dbfs = -80.0
 max_dbfs = 0.0
 queue_blocks = 4
+
+[spatial_field]
+# An optional, display-only analysis path. It never changes tracking, audio,
+# serial traffic, or the gimbal command stream.
+enabled = true
+interval_s = 0.5
+result_ttl_s = 2.0
+max_consecutive_overruns = 3
+max_inference_ms = 400.0
+refresh_hz = 5.0
+
+[spatial_field.depth]
+# Export yolo26n-depth.pt to this OpenVINO directory before enabling the feature.
+model_path = "../models/yolo26n-depth_openvino_model"
+backend = "openvino"
+device = "intel:gpu"
+# 16:9 content is letterboxed from 320x180 to 320x192.
+input_width = 320
+input_height = 192
+# To run at 256x160, re-export an OpenVINO model at that shape and change the
+# two input fields above. Static OpenVINO models cannot safely resize in place.
+min_depth_m = 0.4
+max_depth_m = 10.0
+allow_cpu_fallback = false
+
+[spatial_field.depth.temporal]
+# A conservative log-depth filter removes inter-frame scale flicker without
+# smearing large local changes. It resets after a long analysis gap.
+enabled = true
+time_constant_s = 0.8
+max_gap_s = 1.5
+scale_alignment_enabled = true
+min_overlap_ratio = 0.35
+max_scale_correction_ratio = 1.12
+max_scale_residual_ratio = 1.08
+pixel_gate_ratio = 1.25
+
+[spatial_field.acoustics]
+# Relative free-field display only. Replace these values with measured data
+# before treating the map as a calibrated acoustic result.
+display_floor_db = -40.0
+overlay_opacity = 0.60
+reference_distance_m = 1.0
+beam_half_power_angle_deg = 12.0
+air_absorption_db_per_m = 0.1
+camera_to_speaker_translation_m = [0.0, 0.0, 0.0]
+camera_to_speaker_rotation_deg = [0.0, 0.0, 0.0]
 
 [runtime]
 control_hz = 10.0

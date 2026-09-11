@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from .application.audio_service import AudioService
 from .application.control_service import ControlService
 from .application.latest_snapshot import LatestSnapshotStore
+from .application.spatial_field_service import SpatialFieldService
 from .application.runtime import ApplicationRuntime
 from .application.tracking_session import TrackingSession
 from .application.vision_service import VisionService
@@ -28,6 +29,8 @@ from .ui.qt_workers import QtApplicationRuntime
 from .vision.kalman_smoother import PerTrackKalmanSmoother
 from .vision.pipeline import VisionPipeline
 from .vision.yolo_bytetrack import YOLOByteTrackPeopleTracker
+from .spatial.field import RelativeFreeFieldModel
+from .spatial.yolo_depth import UltralyticsDepthEstimator
 
 
 @dataclass(frozen=True)
@@ -44,7 +47,17 @@ def build_application(config: AppConfig) -> ApplicationBundle:
     tracker = YOLOByteTrackPeopleTracker(config.vision)
     smoother = PerTrackKalmanSmoother(config.vision)
     pipeline = VisionPipeline(tracker, smoother)
-    vision_service = VisionService(camera, pipeline, clock, snapshots)
+    spatial = SpatialFieldService(
+        config.spatial_field,
+        UltralyticsDepthEstimator(config.spatial_field.depth),
+        RelativeFreeFieldModel(
+            config.camera.calibration,
+            config.spatial_field.acoustics,
+            config.spatial_field.depth.min_depth_m,
+            config.spatial_field.depth.max_depth_m,
+        ),
+    )
+    vision_service = VisionService(camera, pipeline, clock, snapshots, spatial=spatial)
 
     automatic = AutoTrackingController(
         config.automatic,
@@ -86,10 +99,12 @@ def build_application(config: AppConfig) -> ApplicationBundle:
     window = MainWindow(
         config.ui,
         spectrum_enabled=config.audio.enabled and config.audio.spectrum.enabled,
+        spatial_enabled=config.spatial_field.enabled,
     )
     window.intent_emitted.connect(runtime.submit)
     runtime.frame_ready.connect(window.apply_display_frame)
     runtime.state_ready.connect(window.apply_ui_snapshot)
     runtime.spectrum_ready.connect(window.apply_spectrum_snapshot)
+    runtime.spatial_ready.connect(window.apply_spatial_field_snapshot)
     runtime.failed.connect(window.show_runtime_error)
     return ApplicationBundle(window, runtime, tracker.device)

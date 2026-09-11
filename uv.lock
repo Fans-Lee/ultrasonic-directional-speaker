@@ -1263,6 +1263,38 @@ wheels = [
 ]
 
 [[package]]
+name = "openvino"
+version = "2026.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "openvino-telemetry" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/46/2c19d55fb540dc46aa6ef78e6075017763d77ba845fb504a6525c3e8b2a7/openvino-2026.3.1-22476-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:efbfdaf3899e1d8f2fe3d039e2396c7ce6a15958f630879465e6e74ad8b80f73", size = 31563686, upload-time = "2026-08-26T09:16:51.353Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/6a/a791444361f665e70cd68646f2fd674298fdc621dca0a9190dc8782ef1e6/openvino-2026.3.1-22476-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:fe391babe3f7c43fa8f10fb78d9174c4090800b26bf7ecd593d76641d650cfad", size = 57494638, upload-time = "2026-08-26T09:16:56.071Z" },
+    { url = "https://files.pythonhosted.org/packages/10/f4/f79ab56cf0fc1fdc5ab7e771b978227b77e166b62c6a3b0bf2576b9f494b/openvino-2026.3.1-22476-cp310-cp310-manylinux_2_35_aarch64.whl", hash = "sha256:90902a331da489031cbd54a42eef93128f47ddcb89fe55f327a876646febb860", size = 28776911, upload-time = "2026-08-26T09:16:59.683Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/28/e8687f87635ee5e60af04bed2cd1b78d4b00929ab641d478779293bcb6ca/openvino-2026.3.1-22476-cp310-cp310-win_amd64.whl", hash = "sha256:98b9f2c7c09b05c90bc81ce90d1fa232feafb0f3c1da7117e72c7da631240e53", size = 75805557, upload-time = "2026-08-26T09:17:04.437Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/d8/8890c2149994219e2a83e15a273c8cfe3a59c719e592d7bfecfcde1993e9/openvino-2026.3.1-22476-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:865dc21201a33485d054f2b44dc5d27e00e78f5cced370e55f14cd0a8838a4dd", size = 31571737, upload-time = "2026-08-26T09:17:07.962Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/d1/f19cd629d3f59f8b883013e2bfbd96747c560feb0afdfcaf5b5a7f58db94/openvino-2026.3.1-22476-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:a767aab95940ce78901335f5e89e61087b81ce122a546e3023489303f8488cd3", size = 57502334, upload-time = "2026-08-26T09:17:11.717Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/62/b11db16beffc9f4f24b70b0228247e6911257ab59ed2b0903f4c0be7cc54/openvino-2026.3.1-22476-cp311-cp311-manylinux_2_35_aarch64.whl", hash = "sha256:5daa3bba15a1e253f138381087cb51f81f72015ca7d37319c669342c0394a968", size = 28786939, upload-time = "2026-08-26T09:17:15.208Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/f5/e3bc14528f8c81184ab307b4a1f794aaae722d2c7f98c794eb99734a49c9/openvino-2026.3.1-22476-cp311-cp311-win_amd64.whl", hash = "sha256:3e778e8b68645bab69258d95fd91ca65024d35bdf374eaf2bbf70b4169336873", size = 75810535, upload-time = "2026-08-26T09:17:19.881Z" },
+    { url = "https://files.pythonhosted.org/packages/83/f1/21f1503b5d4a6671730d75e4d0006e9483dfd21ed9899b1ea956a1e683b8/openvino-2026.3.1-22476-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:3b23fc1669e63b22bdeb3f7cbfcd59b6d6e39ede6e68310ab74a8aaaf3912e70", size = 31612248, upload-time = "2026-08-26T09:17:23.804Z" },
+    { url = "https://files.pythonhosted.org/packages/37/91/bb4cee4b1cbc244d6090fdb7625a0b3e1fe4f368bd2075bff67455451fbe/openvino-2026.3.1-22476-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:40bf3724ec70bce0fce4f9547cd1f19a576ef299172ce4ce2552249d10064acc", size = 57510470, upload-time = "2026-08-26T09:17:27.775Z" },
+    { url = "https://files.pythonhosted.org/packages/88/c1/4291be34f2677af39933516356d805177effcd7457bf5cf99d289ecbb849/openvino-2026.3.1-22476-cp312-cp312-manylinux_2_35_aarch64.whl", hash = "sha256:e6b78918aef61ee4650bd6bbd6b17e5b8cd90f55f145adff5d7f6def907f33be", size = 28778134, upload-time = "2026-08-26T09:17:30.917Z" },
+    { url = "https://files.pythonhosted.org/packages/27/79/77c474c3d8600185792bcb830638198ff3d15fe702028902bd07f4581026/openvino-2026.3.1-22476-cp312-cp312-win_amd64.whl", hash = "sha256:b686302a47abf7c87b48cb265b3a894f787a1b6380f4ab9f5a511de838ba3c64", size = 75818370, upload-time = "2026-08-26T09:17:35.803Z" },
+]
+
+[[package]]
+name = "openvino-telemetry"
+version = "2025.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/8a/89d82f1a9d913fb266c2e6dc2f6030935db24b7152963a8db6c4f039787f/openvino_telemetry-2025.2.0.tar.gz", hash = "sha256:8bf8127218e51e99547bf38b8fb85a8b31c9bf96e6f3a82eb0b3b6a34155977c", size = 18894, upload-time = "2025-07-07T10:29:51.159Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/ac/5ab0ca0aa269ad3c73f7bfc3801b10e5f56f75a31bf68c1ae8bd51cf70a4/openvino_telemetry-2025.2.0-py3-none-any.whl", hash = "sha256:bcb667e83a44f202ecf4cfa49281715c6d7e21499daec04ff853b7f964833599", size = 25227, upload-time = "2025-07-07T10:29:50.189Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1990,6 +2022,9 @@ cuda = [
     { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "torchvision", version = "0.23.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
+spatial = [
+    { name = "openvino" },
+]
 xpu = [
     { name = "pytorch-triton-xpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "torch", version = "2.8.0+xpu", source = { registry = "https://download.pytorch.org/whl/xpu" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -2001,6 +2036,7 @@ requires-dist = [
     { name = "lap", specifier = ">=0.5.12" },
     { name = "matplotlib", specifier = "==3.9.4" },
     { name = "numpy", specifier = "==1.26.4" },
+    { name = "openvino", marker = "extra == 'spatial'", specifier = ">=2026.2,<2027" },
     { name = "pyserial", specifier = ">=3.5" },
     { name = "pyside6", specifier = ">=6.7,<7" },
     { name = "pytorch-triton-xpu", marker = "(sys_platform == 'linux' and extra == 'xpu') or (sys_platform == 'win32' and extra == 'xpu')", specifier = "==3.4.0", index = "https://download.pytorch.org/whl/xpu", conflict = { package = "ultrasonic-directional-speaker", extra = "xpu" } },
@@ -2012,7 +2048,7 @@ requires-dist = [
     { name = "torchvision", marker = "(sys_platform == 'linux' and extra == 'xpu') or (sys_platform == 'win32' and extra == 'xpu')", specifier = "==0.23.0", index = "https://download.pytorch.org/whl/xpu", conflict = { package = "ultrasonic-directional-speaker", extra = "xpu" } },
     { name = "ultralytics", specifier = "==8.4.138" },
 ]
-provides-extras = ["cuda", "xpu"]
+provides-extras = ["spatial", "cuda", "xpu"]
 
 [[package]]
 name = "umf"

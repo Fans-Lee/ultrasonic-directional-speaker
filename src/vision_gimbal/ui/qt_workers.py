@@ -76,6 +76,7 @@ class QtApplicationRuntime(QObject):
     frame_ready = Signal(object)
     state_ready = Signal(object)
     spectrum_ready = Signal(object)
+    spatial_ready = Signal(object)
     failed = Signal(str)
 
     def __init__(
@@ -101,6 +102,12 @@ class QtApplicationRuntime(QObject):
         refresh_hz = getattr(application.audio, "spectrum_refresh_hz", 10.0)
         self._spectrum_timer.setInterval(max(1, round(1000.0 / refresh_hz)))
         self._spectrum_timer.timeout.connect(self._publish_latest_spectrum)
+        self._last_spatial_sequence = -1
+        self._spatial_timer = QTimer(self)
+        spatial = getattr(application.vision, "spatial", None)
+        refresh_hz = getattr(spatial, "refresh_hz", 5.0)
+        self._spatial_timer.setInterval(max(1, round(1000.0 / refresh_hz)))
+        self._spatial_timer.timeout.connect(self._publish_latest_spatial)
         self._started = False
 
     def submit(self, intent) -> None:
@@ -139,6 +146,12 @@ class QtApplicationRuntime(QObject):
         self._display_timer.start()
         if callable(getattr(self.application.audio, "spectrum_snapshot", None)):
             self._spectrum_timer.start()
+        spatial = getattr(self.application.vision, "spatial", None)
+        if (
+            bool(getattr(getattr(spatial, "config", None), "enabled", False))
+            and callable(getattr(self.application.vision, "spatial_snapshot", None))
+        ):
+            self._spatial_timer.start()
 
     @Slot(str)
     def _worker_failed(self, message: str) -> None:
@@ -166,11 +179,23 @@ class QtApplicationRuntime(QObject):
         self._last_spectrum_sequence = snapshot.sequence
         self.spectrum_ready.emit(snapshot)
 
+    @Slot()
+    def _publish_latest_spatial(self) -> None:
+        source = getattr(self.application.vision, "spatial_snapshot", None)
+        if not callable(source):
+            return
+        snapshot = source()
+        if snapshot is None or snapshot.sequence == self._last_spatial_sequence:
+            return
+        self._last_spatial_sequence = snapshot.sequence
+        self.spatial_ready.emit(snapshot)
+
     def stop(self) -> None:
         if not self._started:
             return
         self._display_timer.stop()
         self._spectrum_timer.stop()
+        self._spatial_timer.stop()
         if self._vision_worker is not None:
             self._vision_worker.request_stop()
         if self._control_worker is not None:
@@ -190,4 +215,5 @@ class QtApplicationRuntime(QObject):
         self.application.close()
         self._display_frames.clear()
         self._last_spectrum_sequence = -1
+        self._last_spatial_sequence = -1
         self._started = False
