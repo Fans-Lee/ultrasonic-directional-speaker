@@ -1,0 +1,24 @@
+description: Ultralytics YOLO26n-depth-log model trained on /home/rick/ultralytics_depth_anything/ultralytics/cfg/datasets/depth-mega-v11-imagenet-u7.yaml
+author: Ultralytics
+date: '2026-09-11T16:13:29.949572+08:00'
+version: 8.4.138
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: depth
+head: Depth
+batch: 1
+imgsz:
+- 192
+- 320
+names:
+  0: depth
+args:
+  data: null
+  batch: 1
+  fraction: 1.0
+  quantize: null
+  dynamic: false
+  nms: false
+channels: 3
+end2end: false

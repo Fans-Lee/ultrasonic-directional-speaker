@@ -1,8 +1,10 @@
 """Draw tracking metadata without making selection decisions."""
 
 import cv2
+import numpy as np
 
 from ..domain.state import UiSnapshot
+from ..domain.spatial_field import SpatialFieldSnapshot
 from ..domain.tracking import VisionSnapshot
 
 _COLORS = (
@@ -13,6 +15,49 @@ _COLORS = (
     (255, 220, 80),
     (200, 200, 200),
 )
+
+
+def render_sound_field_overlay(
+    frame,
+    spatial: SpatialFieldSnapshot | None,
+):
+    """Blend the most recent valid relative field map onto a BGR camera frame.
+
+    Invalid depth samples remain fully transparent. Presentation metadata is
+    intentionally kept outside this image so the acoustic view stays uncluttered.
+    """
+    annotated = frame.copy()
+    if spatial is None:
+        return annotated
+
+    levels = np.asarray(spatial.intensity_db_relative, dtype=np.float32)
+    valid = np.isfinite(levels)
+    if spatial.active and np.any(valid):
+        height, width = annotated.shape[:2]
+        normalized = np.clip(
+            (levels - spatial.display_floor_db) / -spatial.display_floor_db,
+            0.0,
+            1.0,
+        )
+        palette_input = np.rint(
+            np.nan_to_num(normalized, nan=0.0) * 255.0
+        ).astype(np.uint8)
+        heatmap = cv2.applyColorMap(palette_input, cv2.COLORMAP_TURBO)
+        heatmap = cv2.resize(heatmap, (width, height), interpolation=cv2.INTER_LINEAR)
+        visible = cv2.resize(
+            valid.astype(np.uint8),
+            (width, height),
+            interpolation=cv2.INTER_NEAREST,
+        ).astype(bool)
+        blended = cv2.addWeighted(
+            annotated,
+            1.0 - spatial.overlay_opacity,
+            heatmap,
+            spatial.overlay_opacity,
+            0.0,
+        )
+        annotated[visible] = blended[visible]
+    return annotated
 
 
 def _dashed_rectangle(image, top_left, bottom_right, color, thickness=2):

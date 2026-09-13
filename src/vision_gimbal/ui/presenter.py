@@ -1,6 +1,6 @@
 """Map domain state to Chinese UI labels and enabled states."""
 
-from ..domain.audio import AudioModeSettings
+from ..domain.audio import AudioModeSettings, AudioSourceKind
 from ..domain.state import ControlMode, TargetStatus, UiSnapshot
 from .view_models import MainWindowViewModel
 
@@ -35,10 +35,23 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         modulation=audio.settings.modulation,
     )
     telemetry = audio.telemetry
+    source_text = {
+        AudioSourceKind.MICROPHONE: "麦克风",
+        AudioSourceKind.STEREO_MIX: "立体声混音",
+        AudioSourceKind.SYSTEM_LOOPBACK: "系统进程回环",
+    }[audio.selected_source]
     if not audio.enabled:
         audio_state_text = "配置已禁用"
     elif audio.transmitting and snapshot.serial.connected:
-        audio_state_text = "传输中" if audio.microphone_open else "启动中"
+        if not audio.source_open:
+            audio_state_text = "启动中"
+        elif (
+            audio.selected_source is AudioSourceKind.SYSTEM_LOOPBACK
+            and not audio.array_active
+        ):
+            audio_state_text = "等待电脑声音"
+        else:
+            audio_state_text = f"{source_text}传输中"
     elif audio.transmitting:
         audio_state_text = "串口重连中"
     elif snapshot.serial.connected:
@@ -51,7 +64,7 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         f"{'DSB-AM' if settings.modulation.value == 'dsb_am' else 'SRAM'}"
     )
     audio_detail = (
-        f"{mode_text} · ESP32 {telemetry.state.name} · "
+        f"音源 {source_text} · {mode_text} · ESP32 {telemetry.state.name} · "
         f"缓冲 {telemetry.buffer_fill_samples}/{telemetry.buffer_capacity_samples} · "
         f"欠载 {telemetry.underrun_count} · 主机丢包 "
         f"{telemetry.host_tx_overrun_count + telemetry.host_capture_overrun_count}"
@@ -82,6 +95,7 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         manual_enabled=not automatic,
         audio_state_text=audio_state_text,
         audio_detail=audio_detail,
+        audio_source=audio.selected_source,
         audio_settings=settings,
         audio_start_enabled=(
             audio.enabled and snapshot.serial.connected and not audio.transmitting

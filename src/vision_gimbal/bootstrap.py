@@ -1,10 +1,11 @@
 """Composition root: wire every concrete adapter in one place."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .application.audio_service import AudioService
 from .application.control_service import ControlService
 from .application.latest_snapshot import LatestSnapshotStore
+from .application.spatial_field_service import SpatialFieldService
 from .application.runtime import ApplicationRuntime
 from .application.tracking_session import TrackingSession
 from .application.vision_service import VisionService
@@ -18,16 +19,20 @@ from .control.command_arbiter import CommandArbiter
 from .control.manual_jog import ManualJogController
 from .control.motion_limiter import GimbalMotionLimiter
 from .control.target_lock import TargetLock
+from .domain.audio import AudioSourceKind
 from .infrastructure.device_gimbal import DeviceGimbalSink
 from .infrastructure.opencv_camera import OpenCVCamera
 from .infrastructure.serial_device_link import create_device_link
-from .infrastructure.sounddevice_microphone import SoundDeviceMicrophone
+from .infrastructure.sounddevice_microphone import SoundDeviceAudioSource
 from .infrastructure.system_clock import SystemClock
+from .infrastructure.wasapi_process_loopback import WasapiProcessLoopbackSource
 from .ui.main_window import MainWindow
 from .ui.qt_workers import QtApplicationRuntime
 from .vision.kalman_smoother import PerTrackKalmanSmoother
 from .vision.pipeline import VisionPipeline
 from .vision.yolo_bytetrack import YOLOByteTrackPeopleTracker
+from .spatial.field import RelativeFreeFieldModel
+from .spatial.yolo_depth import UltralyticsDepthEstimator
 
 
 @dataclass(frozen=True)
@@ -44,7 +49,17 @@ def build_application(config: AppConfig) -> ApplicationBundle:
     tracker = YOLOByteTrackPeopleTracker(config.vision)
     smoother = PerTrackKalmanSmoother(config.vision)
     pipeline = VisionPipeline(tracker, smoother)
-    vision_service = VisionService(camera, pipeline, clock, snapshots)
+    spatial = SpatialFieldService(
+        config.spatial_field,
+        UltralyticsDepthEstimator(config.spatial_field.depth),
+        RelativeFreeFieldModel(
+            config.camera.calibration,
+            config.spatial_field.acoustics,
+            config.spatial_field.depth.min_depth_m,
+            config.spatial_field.depth.max_depth_m,
+        ),
+    )
+    vision_service = VisionService(camera, pipeline, clock, snapshots, spatial=spatial)
 
     automatic = AutoTrackingController(
         config.automatic,
@@ -66,9 +81,24 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         clock,
         snapshots,
     )
+    stereo_mix_capture = replace(
+        config.audio.capture,
+        device=config.audio.capture.stereo_mix_device,
+        channels=config.audio.capture.stereo_mix_channels,
+    )
     audio_service = AudioService(
         config.audio,
-        SoundDeviceMicrophone(config.audio.capture),
+        {
+            AudioSourceKind.MICROPHONE: SoundDeviceAudioSource(
+                config.audio.capture
+            ),
+            AudioSourceKind.STEREO_MIX: SoundDeviceAudioSource(
+                stereo_mix_capture
+            ),
+            AudioSourceKind.SYSTEM_LOOPBACK: WasapiProcessLoopbackSource(
+                config.audio.capture
+            ),
+        },
         AudioPreprocessor(config.audio.capture, config.audio.dsp, config.audio.stream),
         device_link,
         RealtimeSpectrumAnalyzer(
@@ -86,10 +116,12 @@ def build_application(config: AppConfig) -> ApplicationBundle:
     window = MainWindow(
         config.ui,
         spectrum_enabled=config.audio.enabled and config.audio.spectrum.enabled,
+        spatial_enabled=config.spatial_field.enabled,
     )
     window.intent_emitted.connect(runtime.submit)
     runtime.frame_ready.connect(window.apply_display_frame)
     runtime.state_ready.connect(window.apply_ui_snapshot)
     runtime.spectrum_ready.connect(window.apply_spectrum_snapshot)
+    runtime.spatial_ready.connect(window.apply_spatial_field_snapshot)
     runtime.failed.connect(window.show_runtime_error)
     return ApplicationBundle(window, runtime, tracker.device)

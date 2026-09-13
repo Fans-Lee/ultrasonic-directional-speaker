@@ -16,6 +16,7 @@ from ..domain.audio import (
     AudioModeSettings,
     AudioModulationMode,
     AudioProcessingMode,
+    AudioSourceKind,
 )
 from .view_models import MainWindowViewModel
 
@@ -23,13 +24,14 @@ from .view_models import MainWindowViewModel
 class AudioPanel(QWidget):
     start_requested = Signal()
     stop_requested = Signal()
+    source_requested = Signal(object)
     settings_requested = Signal(object)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._applying = False
         layout = QVBoxLayout(self)
-        title = QLabel("麦克风与超声阵列")
+        title = QLabel("音频与超声阵列")
         title.setStyleSheet("font-size: 18px; font-weight: 600;")
         layout.addWidget(title)
 
@@ -40,6 +42,15 @@ class AudioPanel(QWidget):
         layout.addWidget(self.detail_value)
 
         grid = QGridLayout()
+        self.source_combo = QComboBox()
+        self.source_combo.addItem("麦克风", AudioSourceKind.MICROPHONE.value)
+        self.source_combo.addItem(
+            "电脑声音（立体声混音）", AudioSourceKind.STEREO_MIX.value
+        )
+        self.source_combo.addItem(
+            "电脑声音（静音无关回环）",
+            AudioSourceKind.SYSTEM_LOOPBACK.value,
+        )
         self.processing_combo = QComboBox()
         self.processing_combo.addItem("RAW 原始", AudioProcessingMode.RAW.value)
         self.processing_combo.addItem("LOUD 响度增强", AudioProcessingMode.LOUD.value)
@@ -47,16 +58,18 @@ class AudioPanel(QWidget):
         self.modulation_combo.addItem("DSB-AM", AudioModulationMode.DSB_AM.value)
         self.modulation_combo.addItem("SRAM", AudioModulationMode.SRAM.value)
         self.boost_check = QCheckBox("启用 BOOST")
-        grid.addWidget(QLabel("处理"), 0, 0)
-        grid.addWidget(self.processing_combo, 0, 1)
-        grid.addWidget(QLabel("调制"), 1, 0)
-        grid.addWidget(self.modulation_combo, 1, 1)
-        grid.addWidget(self.boost_check, 2, 1)
+        grid.addWidget(QLabel("音源"), 0, 0)
+        grid.addWidget(self.source_combo, 0, 1)
+        grid.addWidget(QLabel("处理"), 1, 0)
+        grid.addWidget(self.processing_combo, 1, 1)
+        grid.addWidget(QLabel("调制"), 2, 0)
+        grid.addWidget(self.modulation_combo, 2, 1)
+        grid.addWidget(self.boost_check, 3, 1)
         layout.addLayout(grid)
 
         button_grid = QGridLayout()
-        self.start_button = QPushButton("开始麦克风链路")
-        self.stop_button = QPushButton("关闭麦克风链路")
+        self.start_button = QPushButton("开始音频链路")
+        self.stop_button = QPushButton("关闭音频链路")
         self.start_button.setMinimumHeight(36)
         self.stop_button.setMinimumHeight(36)
         self.stop_button.setStyleSheet(
@@ -69,9 +82,15 @@ class AudioPanel(QWidget):
 
         self.start_button.clicked.connect(self.start_requested)
         self.stop_button.clicked.connect(self.stop_requested)
+        self.source_combo.currentIndexChanged.connect(self._emit_source)
         self.processing_combo.currentIndexChanged.connect(self._emit_settings)
         self.modulation_combo.currentIndexChanged.connect(self._emit_settings)
         self.boost_check.toggled.connect(self._emit_settings)
+
+    def _emit_source(self, *_args) -> None:
+        if self._applying:
+            return
+        self.source_requested.emit(AudioSourceKind(self.source_combo.currentData()))
 
     def _emit_settings(self, *_args) -> None:
         if self._applying:
@@ -97,6 +116,7 @@ class AudioPanel(QWidget):
         self.detail_value.setText(view.audio_detail)
         self.start_button.setEnabled(view.audio_start_enabled)
         self.stop_button.setEnabled(view.audio_stop_enabled)
+        self.source_combo.setEnabled(view.audio_controls_enabled)
         self.processing_combo.setEnabled(view.audio_controls_enabled)
         self.modulation_combo.setEnabled(view.audio_controls_enabled)
         self.boost_check.setEnabled(view.audio_controls_enabled)
@@ -104,12 +124,15 @@ class AudioPanel(QWidget):
         settings = view.audio_settings
         self._applying = True
         try:
+            source_index = self.source_combo.findData(view.audio_source.value)
             processing_index = self.processing_combo.findData(
                 settings.processing.value
             )
             modulation_index = self.modulation_combo.findData(
                 settings.modulation.value
             )
+            if source_index >= 0:
+                self.source_combo.setCurrentIndex(source_index)
             if processing_index >= 0:
                 self.processing_combo.setCurrentIndex(processing_index)
             if modulation_index >= 0:

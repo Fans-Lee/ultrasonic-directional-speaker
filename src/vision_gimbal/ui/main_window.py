@@ -13,11 +13,13 @@ from PySide6.QtWidgets import (
 
 from ..application.vision_service import DisplayFrame
 from ..audio.spectrum import AudioSpectrumSnapshot
+from ..domain.spatial_field import SpatialFieldSnapshot
 from ..config.schema import UiConfig
 from ..domain.intents import (
     ClearManualKeys,
     ConfigureAudio,
     ManualKeyChanged,
+    SelectAudioSource,
     SelectTarget,
     ShutdownRequested,
     StartAudio,
@@ -30,6 +32,7 @@ from .audio_panel import AudioPanel
 from .control_panel import ControlPanel
 from .key_input import ManualKeyFilter
 from .presenter import present
+from .sound_field_panel import SoundFieldPanel
 from .spectrum_panel import SpectrumPanel
 from .status_panel import StatusPanel
 from .video_canvas import VideoCanvas
@@ -42,6 +45,7 @@ class MainWindow(QMainWindow):
         self,
         config: UiConfig,
         spectrum_enabled: bool = True,
+        spatial_enabled: bool = False,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -52,13 +56,17 @@ class MainWindow(QMainWindow):
         root = QHBoxLayout(central)
         visual_splitter = QSplitter(Qt.Orientation.Vertical)
         self.video = VideoCanvas()
+        self.sound_field = SoundFieldPanel()
         self.spectrum = SpectrumPanel()
         visual_splitter.addWidget(self.video)
+        visual_splitter.addWidget(self.sound_field)
         visual_splitter.addWidget(self.spectrum)
+        self.sound_field.setVisible(spatial_enabled)
         self.spectrum.setVisible(spectrum_enabled)
         visual_splitter.setStretchFactor(0, 3)
         visual_splitter.setStretchFactor(1, 1)
-        visual_splitter.setSizes([520, 220])
+        visual_splitter.setStretchFactor(2, 1)
+        visual_splitter.setSizes([360, 240, 160])
         root.addWidget(visual_splitter, 1)
 
         sidebar = QWidget()
@@ -92,6 +100,9 @@ class MainWindow(QMainWindow):
         self.audio.settings_requested.connect(
             lambda settings: self.intent_emitted.emit(ConfigureAudio(settings))
         )
+        self.audio.source_requested.connect(
+            lambda source: self.intent_emitted.emit(SelectAudioSource(source))
+        )
         self.key_filter.direction_changed.connect(self._manual_key)
         self.key_filter.clear_requested.connect(
             lambda: self.intent_emitted.emit(ClearManualKeys())
@@ -109,6 +120,9 @@ class MainWindow(QMainWindow):
 
     def apply_spectrum_snapshot(self, snapshot: AudioSpectrumSnapshot) -> None:
         self.spectrum.apply(snapshot)
+
+    def apply_spatial_field_snapshot(self, snapshot: SpatialFieldSnapshot) -> None:
+        self.sound_field.set_spatial_field_snapshot(snapshot)
 
     def show_runtime_error(self, message: str) -> None:
         self.status.show_error(message)

@@ -23,6 +23,12 @@ class AudioModulationMode(str, Enum):
     SRAM = "sram"
 
 
+class AudioSourceKind(str, Enum):
+    MICROPHONE = "microphone"
+    STEREO_MIX = "stereo_mix"
+    SYSTEM_LOOPBACK = "system_loopback"
+
+
 @dataclass(frozen=True)
 class AudioModeSettings:
     processing: AudioProcessingMode = AudioProcessingMode.RAW
@@ -83,7 +89,15 @@ class AudioStreamTelemetry:
 class AudioControlStatus:
     enabled: bool = False
     transmitting: bool = False
-    microphone_open: bool = False
+    selected_source: AudioSourceKind = AudioSourceKind.MICROPHONE
+    active_source: AudioSourceKind | None = None
+    source_open: bool = False
+    array_active: bool = False
     settings: AudioModeSettings = field(default_factory=AudioModeSettings)
     telemetry: AudioStreamTelemetry = field(default_factory=AudioStreamTelemetry)
     last_error: str = ""
+
+    @property
+    def microphone_open(self) -> bool:
+        """Compatibility view for older presentation and diagnostic code."""
+        return self.source_open and self.active_source is AudioSourceKind.MICROPHONE

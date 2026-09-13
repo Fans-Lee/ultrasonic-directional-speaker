@@ -1,6 +1,40 @@
 """Typed configuration for the complete desktop application."""
 
 from dataclasses import dataclass, field
+from math import isfinite
+
+
+@dataclass(frozen=True)
+class CameraCalibrationConfig:
+    """Intrinsic parameters at the resolution used during calibration."""
+
+    reference_width: int = 1920
+    reference_height: int = 1080
+    fx: float = 1450.0
+    fy: float = 1450.0
+    cx: float = 960.0
+    cy: float = 540.0
+    distortion: tuple[float, float, float, float, float] = (
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    )
+
+    def __post_init__(self) -> None:
+        if self.reference_width <= 0 or self.reference_height <= 0:
+            raise ValueError("camera calibration reference dimensions must be positive")
+        if self.fx <= 0.0 or self.fy <= 0.0:
+            raise ValueError("camera calibration focal lengths must be positive")
+        if not 0.0 <= self.cx <= self.reference_width:
+            raise ValueError("camera calibration cx must lie within reference width")
+        if not 0.0 <= self.cy <= self.reference_height:
+            raise ValueError("camera calibration cy must lie within reference height")
+        values = tuple(float(value) for value in self.distortion)
+        if len(values) != 5 or not all(isfinite(value) for value in values):
+            raise ValueError("camera calibration distortion must contain five finite values")
+        object.__setattr__(self, "distortion", values)
 
 
 @dataclass(frozen=True)
@@ -10,6 +44,9 @@ class CameraConfig:
     width: int = 1280
     height: int = 720
     fps: int = 30
+    calibration: CameraCalibrationConfig = field(
+        default_factory=CameraCalibrationConfig
+    )
 
     def __post_init__(self) -> None:
         if self.rotation not in (0, 180):
@@ -212,14 +249,33 @@ class SerialConfig:
 
 @dataclass(frozen=True)
 class AudioCaptureConfig:
+    source: str = "microphone"
     device: str | int | None = None
     sample_rate: int = 48000
     channels: int = 1
+    stereo_mix_device: str | int | None = "立体声混音"
+    stereo_mix_channels: int = 2
+    process_loopback_helper: str = ""
     block_ms: int = 10
     queue_ms: int = 100
 
     def __post_init__(self) -> None:
-        if self.sample_rate <= 0 or self.channels <= 0:
+        normalized_source = str(self.source).lower().replace("-", "_")
+        if normalized_source not in {
+            "microphone",
+            "stereo_mix",
+            "system_loopback",
+        }:
+            raise ValueError(
+                "audio.capture.source must be microphone, stereo_mix, "
+                "or system_loopback"
+            )
+        object.__setattr__(self, "source", normalized_source)
+        if (
+            self.sample_rate <= 0
+            or self.channels <= 0
+            or self.stereo_mix_channels <= 0
+        ):
             raise ValueError("audio capture rate and channels must be positive")
         if self.block_ms <= 0 or self.queue_ms < self.block_ms:
             raise ValueError("audio capture queue must hold at least one block")
@@ -255,6 +311,25 @@ class AudioDspConfig:
             raise ValueError("audio compressor time constants must be positive")
         if not -12.0 <= self.limiter_ceiling_dbfs < 0.0:
             raise ValueError("audio limiter ceiling must be in [-12, 0) dBFS")
+
+
+@dataclass(frozen=True)
+class AudioActivityGateConfig:
+    enabled: bool = True
+    system_loopback_only: bool = True
+    silence_threshold_dbfs: float = -60.0
+    resume_threshold_dbfs: float = -50.0
+    release_ms: int = 1000
+
+    def __post_init__(self) -> None:
+        if not -120.0 <= self.silence_threshold_dbfs < 0.0:
+            raise ValueError("audio activity-gate silence threshold is invalid")
+        if not self.silence_threshold_dbfs < self.resume_threshold_dbfs < 0.0:
+            raise ValueError(
+                "audio activity-gate resume threshold must exceed silence threshold"
+            )
+        if self.release_ms <= 0:
+            raise ValueError("audio activity-gate release_ms must be positive")
 
 
 @dataclass(frozen=True)
@@ -343,9 +418,143 @@ class AudioConfig:
     auto_start: bool = True
     capture: AudioCaptureConfig = field(default_factory=AudioCaptureConfig)
     dsp: AudioDspConfig = field(default_factory=AudioDspConfig)
+    activity_gate: AudioActivityGateConfig = field(
+        default_factory=AudioActivityGateConfig
+    )
     stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
     recording: AudioRecordingConfig = field(default_factory=AudioRecordingConfig)
     spectrum: AudioSpectrumConfig = field(default_factory=AudioSpectrumConfig)
+
+
+@dataclass(frozen=True)
+class SpatialDepthTemporalConfig:
+    """Conservative temporal stabilization for independent depth estimates.
+
+    This filter has no camera-motion estimate, so it only blends pixels that
+    already agree after a bounded global scale correction.  Large local
+    changes remain responsive instead of becoming depth-map trails.
+    """
+
+    enabled: bool = True
+    time_constant_s: float = 0.8
+    max_gap_s: float = 1.5
+    scale_alignment_enabled: bool = True
+    min_overlap_ratio: float = 0.35
+    max_scale_correction_ratio: float = 1.12
+    max_scale_residual_ratio: float = 1.08
+    pixel_gate_ratio: float = 1.25
+
+    def __post_init__(self) -> None:
+        if self.time_constant_s <= 0.0 or self.max_gap_s <= 0.0:
+            raise ValueError("spatial temporal time constants must be positive")
+        if not 0.0 < self.min_overlap_ratio <= 1.0:
+            raise ValueError("spatial temporal overlap ratio must be in (0, 1]")
+        for name in (
+            "max_scale_correction_ratio",
+            "max_scale_residual_ratio",
+            "pixel_gate_ratio",
+        ):
+            if getattr(self, name) <= 1.0:
+                raise ValueError(f"spatial temporal {name} must exceed 1")
+
+
+@dataclass(frozen=True)
+class SpatialDepthConfig:
+    """Low-rate dense-depth inference configuration.
+
+    The model is intentionally separate from the primary people-tracking model.
+    ``input_height`` includes any letterbox padding required by the model.
+    """
+
+    model_path: str = "models/yolo26n-depth_openvino_model"
+    backend: str = "openvino"
+    device: str = "intel:gpu"
+    input_width: int = 320
+    input_height: int = 192
+    min_depth_m: float = 0.4
+    max_depth_m: float = 10.0
+    allow_cpu_fallback: bool = False
+    temporal: SpatialDepthTemporalConfig = field(
+        default_factory=SpatialDepthTemporalConfig
+    )
+
+    def __post_init__(self) -> None:
+        if self.backend.lower() not in {"openvino", "ultralytics"}:
+            raise ValueError("spatial_field.depth.backend must be openvino or ultralytics")
+        for name in (
+            "input_width",
+            "input_height",
+        ):
+            value = getattr(self, name)
+            if value <= 0 or value % 32:
+                raise ValueError(f"spatial_field.depth.{name} must be a positive multiple of 32")
+        if not 0.0 < self.min_depth_m < self.max_depth_m:
+            raise ValueError("spatial field depth range must satisfy 0 < min < max")
+        if not self.model_path.strip() or not self.device.strip():
+            raise ValueError("spatial depth model path and device cannot be empty")
+
+
+@dataclass(frozen=True)
+class SpatialAcousticsConfig:
+    """Parameters for a deliberately conservative relative free-field display."""
+
+    display_floor_db: float = -40.0
+    overlay_opacity: float = 0.42
+    reference_distance_m: float = 1.0
+    beam_half_power_angle_deg: float = 12.0
+    air_absorption_db_per_m: float = 0.0
+    camera_to_speaker_translation_m: tuple[float, float, float] = (
+        0.0,
+        0.0,
+        0.0,
+    )
+    camera_to_speaker_rotation_deg: tuple[float, float, float] = (
+        0.0,
+        0.0,
+        0.0,
+    )
+
+    def __post_init__(self) -> None:
+        if self.display_floor_db >= 0.0:
+            raise ValueError("spatial display floor must be negative")
+        if not 0.0 <= self.overlay_opacity <= 1.0:
+            raise ValueError("spatial overlay opacity must be in [0, 1]")
+        if self.reference_distance_m <= 0.0:
+            raise ValueError("spatial reference distance must be positive")
+        if not 0.0 < self.beam_half_power_angle_deg < 90.0:
+            raise ValueError("spatial beam half-power angle must be in (0, 90)")
+        if self.air_absorption_db_per_m < 0.0:
+            raise ValueError("spatial air absorption cannot be negative")
+        for name in (
+            "camera_to_speaker_translation_m",
+            "camera_to_speaker_rotation_deg",
+        ):
+            values = tuple(float(value) for value in getattr(self, name))
+            if len(values) != 3 or not all(isfinite(value) for value in values):
+                raise ValueError(f"spatial {name} must contain three finite values")
+            object.__setattr__(self, name, values)
+
+
+@dataclass(frozen=True)
+class SpatialFieldConfig:
+    """Optional analysis path. It must never feed the tracking control loop."""
+
+    enabled: bool = False
+    interval_s: float = 0.5
+    result_ttl_s: float = 2.0
+    max_consecutive_overruns: int = 3
+    max_inference_ms: float = 400.0
+    refresh_hz: float = 5.0
+    depth: SpatialDepthConfig = field(default_factory=SpatialDepthConfig)
+    acoustics: SpatialAcousticsConfig = field(default_factory=SpatialAcousticsConfig)
+
+    def __post_init__(self) -> None:
+        if self.interval_s <= 0.0 or self.result_ttl_s < self.interval_s:
+            raise ValueError("spatial interval and result TTL are invalid")
+        if self.max_consecutive_overruns <= 0 or self.max_inference_ms <= 0.0:
+            raise ValueError("spatial overrun limits must be positive")
+        if not 0.0 < self.refresh_hz <= 30.0:
+            raise ValueError("spatial refresh_hz must be in (0, 30]")
 
 
 @dataclass(frozen=True)
@@ -376,5 +585,6 @@ class AppConfig:
     motion: GimbalMotionConfig = field(default_factory=GimbalMotionConfig)
     serial: SerialConfig = field(default_factory=SerialConfig)
     audio: AudioConfig = field(default_factory=AudioConfig)
+    spatial_field: SpatialFieldConfig = field(default_factory=SpatialFieldConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     ui: UiConfig = field(default_factory=UiConfig)

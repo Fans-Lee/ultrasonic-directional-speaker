@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from ..domain.audio import AudioModeSettings
+from ..domain.audio import AudioModeSettings, AudioSourceKind
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,7 @@ class MainWindowViewModel:
     manual_enabled: bool
     audio_state_text: str
     audio_detail: str
+    audio_source: AudioSourceKind
     audio_settings: AudioModeSettings
     audio_start_enabled: bool
     audio_stop_enabled: bool
