@@ -13,8 +13,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from PySide6.QtCore import QEventLoop, QTimer
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QEventLoop, QPoint, QPointF, Qt, QTimer
+from PySide6.QtGui import QWheelEvent
+from PySide6.QtWidgets import QApplication, QScrollArea, QVBoxLayout, QWidget
 
 from vision_gimbal.application.runtime import ApplicationRuntime
 from vision_gimbal.application.vision_service import DisplayFrame
@@ -45,11 +46,13 @@ from vision_gimbal.domain.state import (
 )
 from vision_gimbal.domain.tracking import VisionSnapshot
 from vision_gimbal.ui.qt_workers import QtApplicationRuntime
-from vision_gimbal.ui.audio_panel import AudioPanel
+from vision_gimbal.ui.audio_panel import AudioModeComboBox, AudioPanel
+from vision_gimbal.ui.main_window import MainWindow
 from vision_gimbal.ui.presenter import present
 from vision_gimbal.ui.sound_field_panel import SoundFieldPanel
 from vision_gimbal.ui.spectrum_panel import SpectrumPanel
 from vision_gimbal.domain.spatial_field import SpatialFieldSnapshot
+from vision_gimbal.config.schema import UiConfig
 
 
 class _FakeVisionService:
@@ -279,6 +282,36 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         panel.stop_button.click()
         self.assertEqual(stops, [True])
 
+    def test_audio_mode_combo_wheel_scrolls_parent_without_changing_value(self):
+        scroll_area = QScrollArea()
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        combo = AudioModeComboBox()
+        combo.addItems(["first", "second"])
+        layout.addWidget(combo)
+        content.setMinimumHeight(1000)
+        scroll_area.setWidget(content)
+        scroll_area.resize(300, 200)
+        scroll_area.show()
+        self.qt_app.processEvents()
+
+        scroll_area.verticalScrollBar().setValue(0)
+        wheel_event = QWheelEvent(
+            QPointF(10, 10),
+            QPointF(10, 10),
+            QPoint(),
+            QPoint(0, -120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False,
+        )
+        QApplication.sendEvent(combo, wheel_event)
+
+        self.assertEqual(combo.currentIndex(), 0)
+        self.assertGreater(scroll_area.verticalScrollBar().value(), 0)
+        scroll_area.close()
+
     def test_spectrum_panel_displays_snapshot_status(self):
         panel = SpectrumPanel()
         audio = _FakeAudioService()
@@ -288,6 +321,33 @@ class QtApplicationRuntimeTests(unittest.TestCase):
 
         self.assertIn("峰值 -12.0 dBFS", panel.status.text())
         self.assertFalse(panel.canvas._image.isNull())
+
+    def test_main_window_uses_switchable_visual_tabs(self):
+        window = MainWindow(
+            UiConfig(),
+            spectrum_enabled=True,
+            spatial_enabled=True,
+        )
+
+        self.assertEqual(window.visual_tabs.count(), 3)
+        self.assertEqual(
+            [window.visual_tabs.tabText(index) for index in range(3)],
+            ["追踪画面", "相对声场", "实时频谱"],
+        )
+        self.assertIs(window.visual_tabs.currentWidget(), window.video)
+
+        window.visual_tabs.setCurrentWidget(window.sound_field)
+        self.assertIs(window.visual_tabs.currentWidget(), window.sound_field)
+
+    def test_main_window_omits_disabled_visual_tabs(self):
+        window = MainWindow(
+            UiConfig(),
+            spectrum_enabled=False,
+            spatial_enabled=False,
+        )
+
+        self.assertEqual(window.visual_tabs.count(), 1)
+        self.assertIs(window.visual_tabs.currentWidget(), window.video)
 
     def test_sound_field_panel_is_separate_from_tracking_video(self):
         panel = SoundFieldPanel()

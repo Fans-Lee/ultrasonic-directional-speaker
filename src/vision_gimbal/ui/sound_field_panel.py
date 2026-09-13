@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import cv2
 from PySide6.QtCore import QRect, Qt
-from PySide6.QtGui import QImage, QPainter, QPaintEvent, QPixmap
+from PySide6.QtGui import QColor, QImage, QPainter, QPaintEvent, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ..domain.spatial_field import SpatialFieldSnapshot
@@ -17,10 +17,10 @@ class SoundFieldCanvas(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("soundFieldCanvas")
         self._spatial: SpatialFieldSnapshot | None = None
         self._pixmap: QPixmap | None = None
         self.setMinimumSize(500, 281)
-        self.setStyleSheet("background: #111827;")
 
     def set_spatial_field_snapshot(self, snapshot: SpatialFieldSnapshot) -> None:
         self._spatial = snapshot
@@ -48,9 +48,9 @@ class SoundFieldCanvas(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:
         del event
         painter = QPainter(self)
-        painter.fillRect(self.rect(), Qt.GlobalColor.black)
+        painter.fillRect(self.rect(), QColor("#07101e"))
         if self._pixmap is None:
-            painter.setPen(Qt.GlobalColor.white)
+            painter.setPen(QColor("#a8b9cf"))
             painter.drawText(
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
@@ -76,12 +76,22 @@ class SoundFieldPanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        title = QLabel("相对声场叠加画面")
-        title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        layout.setContentsMargins(0, 10, 0, 0)
+        layout.setSpacing(8)
+        title = QLabel("实时声场模拟")
+        title.setProperty("role", "section-title")
         layout.addWidget(title)
+        subtitle = QLabel("实时声场模拟")
+        subtitle.setProperty("role", "section-subtitle")
+        layout.addWidget(subtitle)
+
+        canvas_frame = QWidget()
+        canvas_frame.setProperty("card", True)
+        canvas_layout = QVBoxLayout(canvas_frame)
+        canvas_layout.setContentsMargins(1, 1, 1, 1)
         self.canvas = SoundFieldCanvas()
-        layout.addWidget(self.canvas, 1)
+        canvas_layout.addWidget(self.canvas)
+        layout.addWidget(canvas_frame, 1)
 
     def set_spatial_field_snapshot(self, snapshot: SpatialFieldSnapshot) -> None:
         self.canvas.set_spatial_field_snapshot(snapshot)

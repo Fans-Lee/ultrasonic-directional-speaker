@@ -43,6 +43,7 @@ _BORDER = QColor(71, 85, 105)
 class SpectrumCanvas(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("spectrumCanvas")
         self._snapshot: AudioSpectrumSnapshot | None = None
         self._image: QImage | None = None
         self._message = "启动麦克风链路后显示发送音频频谱"
@@ -159,19 +160,27 @@ class SpectrumPanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 10, 0, 0)
+        layout.setSpacing(8)
         header = QHBoxLayout()
+        header.setContentsMargins(2, 0, 2, 0)
         title = QLabel("实时发送频谱（dBFS）")
-        title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        title.setProperty("role", "section-title")
         self.status = QLabel("等待麦克风链路")
         self.status.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.status.setStyleSheet("color: #94a3b8;")
+        self.status.setProperty("role", "helper")
         header.addWidget(title)
         header.addStretch(1)
         header.addWidget(self.status)
         layout.addLayout(header)
+
+        canvas_frame = QWidget()
+        canvas_frame.setProperty("card", True)
+        canvas_layout = QVBoxLayout(canvas_frame)
+        canvas_layout.setContentsMargins(1, 1, 1, 1)
         self.canvas = SpectrumCanvas()
-        layout.addWidget(self.canvas, 1)
+        canvas_layout.addWidget(self.canvas)
+        layout.addWidget(canvas_frame, 1)
 
     def apply(self, snapshot: AudioSpectrumSnapshot) -> None:
         self.canvas.apply(snapshot)
