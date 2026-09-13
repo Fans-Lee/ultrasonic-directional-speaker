@@ -1,4 +1,4 @@
-"""End-to-end stateful preprocessing from microphone blocks to PCM_U8."""
+"""End-to-end stateful preprocessing from capture blocks to PCM_U8."""
 
 from __future__ import annotations
 
@@ -78,9 +78,9 @@ class AudioPreprocessor:
         elif values.ndim == 2 and values.shape[1] >= 1:
             mono = np.mean(values, axis=1, dtype=np.float32)
         else:
-            raise ValueError("microphone block must be samples or samples x channels")
+            raise ValueError("audio block must be samples or samples x channels")
         if not np.all(np.isfinite(mono)):
-            raise ValueError("microphone block contains NaN or infinity")
+            raise ValueError("audio block contains NaN or infinity")
 
         filtered = self._highpass.process(mono)
         # Measured EQ is deliberately disabled until coefficients derived from

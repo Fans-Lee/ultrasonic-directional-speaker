@@ -1,4 +1,4 @@
-"""Tests for live microphone preprocessing and packetization."""
+"""Tests for live audio source preprocessing, switching, and packetization."""
 
 import math
 import sys
@@ -25,6 +25,7 @@ from vision_gimbal.domain.audio import (
     AudioModeSettings,
     AudioModulationMode,
     AudioProcessingMode,
+    AudioSourceKind,
     AudioStreamTelemetry,
 )
 from vision_gimbal.protocol.messages import (
@@ -57,6 +58,7 @@ class _DeviceLink:
         self.packets = []
         self.mutes = []
         self.stopped = False
+        self.stop_count = 0
 
     def start_audio_stream(self, parameters: StreamStart) -> None:
         self.parameters = parameters
@@ -67,6 +69,7 @@ class _DeviceLink:
 
     def stop_audio_stream(self) -> None:
         self.stopped = True
+        self.stop_count += 1
 
     def set_mute(self, enabled: bool) -> None:
         self.mutes.append(enabled)
@@ -172,7 +175,7 @@ class AudioServiceTests(unittest.TestCase):
         link = _DeviceLink()
         service = AudioService(
             config,
-            microphone,
+            {AudioSourceKind.MICROPHONE: microphone},
             AudioPreprocessor(config.capture, config.dsp, config.stream),
             link,
         )
@@ -206,13 +209,53 @@ class AudioServiceTests(unittest.TestCase):
         self.assertTrue(link.stopped)
         service.close()
 
+    def test_live_source_change_closes_old_source_and_restarts_stream(self):
+        config = replace(AudioConfig(enabled=True), auto_start=False)
+        microphone = _Microphone()
+        stereo_mix = _Microphone()
+        link = _DeviceLink()
+        service = AudioService(
+            config,
+            {
+                AudioSourceKind.MICROPHONE: microphone,
+                AudioSourceKind.STEREO_MIX: stereo_mix,
+            },
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+        )
+
+        service.start()
+        service.start_transmitting()
+        stale_callback = microphone.callback
+        service.select_source(AudioSourceKind.STEREO_MIX)
+
+        status = service.control_status()
+        self.assertIs(status.selected_source, AudioSourceKind.STEREO_MIX)
+        self.assertIs(status.active_source, AudioSourceKind.STEREO_MIX)
+        self.assertTrue(status.source_open)
+        self.assertEqual(microphone.close_count, 1)
+        self.assertIsNone(microphone.callback)
+        self.assertIsNotNone(stereo_mix.callback)
+        self.assertEqual(len(link.parameter_history), 2)
+
+        stale_callback(np.ones((480, 1), dtype=np.float32))
+        stereo_mix.callback(np.zeros((480, 2), dtype=np.float32))
+        stereo_mix.callback(np.zeros((480, 2), dtype=np.float32))
+        deadline = time.monotonic() + 1.0
+        while not link.packets and time.monotonic() < deadline:
+            time.sleep(0.01)
+        service.close()
+
+        self.assertTrue(link.packets)
+        self.assertEqual(set(link.packets[-1].samples), {128})
+
     def test_two_capture_blocks_form_one_protocol_packet(self):
         config = replace(AudioConfig(enabled=True), auto_start=True)
         microphone = _Microphone()
         link = _DeviceLink()
         service = AudioService(
             config,
-            microphone,
+            {AudioSourceKind.MICROPHONE: microphone},
             AudioPreprocessor(config.capture, config.dsp, config.stream),
             link,
         )
@@ -235,6 +278,56 @@ class AudioServiceTests(unittest.TestCase):
         self.assertEqual(link.mutes[-1], True)
         self.assertTrue(link.stopped)
 
+    def test_system_loopback_activity_gate_stops_silent_carrier_and_resumes(self):
+        base = AudioConfig(enabled=True)
+        config = replace(
+            base,
+            auto_start=True,
+            capture=replace(base.capture, source="system_loopback"),
+            activity_gate=replace(base.activity_gate, release_ms=20),
+        )
+        system_loopback = _Microphone()
+        link = _DeviceLink()
+        service = AudioService(
+            config,
+            {AudioSourceKind.SYSTEM_LOOPBACK: system_loopback},
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+        )
+
+        service.start()
+        self.assertIsNotNone(system_loopback.callback)
+        self.assertEqual(link.parameter_history, [])
+        self.assertFalse(service.control_status().array_active)
+
+        phase = np.arange(480, dtype=np.float32) / 48000.0
+        active = np.sin(2.0 * math.pi * 1000.0 * phase).astype(np.float32)
+        active = np.column_stack((active, active)) * 0.2
+        for _ in range(2):
+            system_loopback.callback(active)
+        deadline = time.monotonic() + 1.0
+        while not link.parameter_history and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertTrue(service.control_status().array_active)
+
+        silence = np.zeros((480, 2), dtype=np.float32)
+        for _ in range(50):
+            system_loopback.callback(silence)
+        deadline = time.monotonic() + 1.0
+        while link.stop_count == 0 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertGreaterEqual(link.stop_count, 1)
+        self.assertFalse(service.control_status().array_active)
+
+        for _ in range(2):
+            system_loopback.callback(active)
+        deadline = time.monotonic() + 1.0
+        while len(link.parameter_history) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        service.close()
+
+        self.assertGreaterEqual(len(link.parameter_history), 2)
+
     def test_spectrum_tap_follows_audio_lifecycle(self):
         config = replace(AudioConfig(enabled=True), auto_start=True)
         microphone = _Microphone()
@@ -242,7 +335,7 @@ class AudioServiceTests(unittest.TestCase):
         spectrum = _SpectrumAnalyzer()
         service = AudioService(
             config,
-            microphone,
+            {AudioSourceKind.MICROPHONE: microphone},
             AudioPreprocessor(config.capture, config.dsp, config.stream),
             link,
             spectrum,
@@ -276,7 +369,7 @@ class AudioServiceTests(unittest.TestCase):
             link = _DeviceLink()
             service = AudioService(
                 config,
-                microphone,
+                {AudioSourceKind.MICROPHONE: microphone},
                 AudioPreprocessor(config.capture, config.dsp, config.stream),
                 link,
             )

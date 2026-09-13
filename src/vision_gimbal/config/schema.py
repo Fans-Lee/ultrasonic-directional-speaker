@@ -249,14 +249,33 @@ class SerialConfig:
 
 @dataclass(frozen=True)
 class AudioCaptureConfig:
+    source: str = "microphone"
     device: str | int | None = None
     sample_rate: int = 48000
     channels: int = 1
+    stereo_mix_device: str | int | None = "立体声混音"
+    stereo_mix_channels: int = 2
+    process_loopback_helper: str = ""
     block_ms: int = 10
     queue_ms: int = 100
 
     def __post_init__(self) -> None:
-        if self.sample_rate <= 0 or self.channels <= 0:
+        normalized_source = str(self.source).lower().replace("-", "_")
+        if normalized_source not in {
+            "microphone",
+            "stereo_mix",
+            "system_loopback",
+        }:
+            raise ValueError(
+                "audio.capture.source must be microphone, stereo_mix, "
+                "or system_loopback"
+            )
+        object.__setattr__(self, "source", normalized_source)
+        if (
+            self.sample_rate <= 0
+            or self.channels <= 0
+            or self.stereo_mix_channels <= 0
+        ):
             raise ValueError("audio capture rate and channels must be positive")
         if self.block_ms <= 0 or self.queue_ms < self.block_ms:
             raise ValueError("audio capture queue must hold at least one block")
@@ -292,6 +311,25 @@ class AudioDspConfig:
             raise ValueError("audio compressor time constants must be positive")
         if not -12.0 <= self.limiter_ceiling_dbfs < 0.0:
             raise ValueError("audio limiter ceiling must be in [-12, 0) dBFS")
+
+
+@dataclass(frozen=True)
+class AudioActivityGateConfig:
+    enabled: bool = True
+    system_loopback_only: bool = True
+    silence_threshold_dbfs: float = -60.0
+    resume_threshold_dbfs: float = -50.0
+    release_ms: int = 1000
+
+    def __post_init__(self) -> None:
+        if not -120.0 <= self.silence_threshold_dbfs < 0.0:
+            raise ValueError("audio activity-gate silence threshold is invalid")
+        if not self.silence_threshold_dbfs < self.resume_threshold_dbfs < 0.0:
+            raise ValueError(
+                "audio activity-gate resume threshold must exceed silence threshold"
+            )
+        if self.release_ms <= 0:
+            raise ValueError("audio activity-gate release_ms must be positive")
 
 
 @dataclass(frozen=True)
@@ -380,6 +418,9 @@ class AudioConfig:
     auto_start: bool = True
     capture: AudioCaptureConfig = field(default_factory=AudioCaptureConfig)
     dsp: AudioDspConfig = field(default_factory=AudioDspConfig)
+    activity_gate: AudioActivityGateConfig = field(
+        default_factory=AudioActivityGateConfig
+    )
     stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
     recording: AudioRecordingConfig = field(default_factory=AudioRecordingConfig)
     spectrum: AudioSpectrumConfig = field(default_factory=AudioSpectrumConfig)

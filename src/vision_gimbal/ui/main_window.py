@@ -19,6 +19,7 @@ from ..domain.intents import (
     ClearManualKeys,
     ConfigureAudio,
     ManualKeyChanged,
+    SelectAudioSource,
     SelectTarget,
     ShutdownRequested,
     StartAudio,
@@ -98,6 +99,9 @@ class MainWindow(QMainWindow):
         )
         self.audio.settings_requested.connect(
             lambda settings: self.intent_emitted.emit(ConfigureAudio(settings))
+        )
+        self.audio.source_requested.connect(
+            lambda source: self.intent_emitted.emit(SelectAudioSource(source))
         )
         self.key_filter.direction_changed.connect(self._manual_key)
         self.key_filter.clear_requested.connect(

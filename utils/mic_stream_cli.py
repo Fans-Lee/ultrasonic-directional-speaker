@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stream the computer microphone to the ESP32 without starting vision or Qt."""
+"""Stream a live audio source without starting vision or Qt."""
 
 from __future__ import annotations
 
@@ -19,13 +19,17 @@ from vision_gimbal.application.audio_service import AudioService
 from vision_gimbal.audio.diagnostics import diagnostic_record, format_diagnostics
 from vision_gimbal.audio.preprocessor import AudioPreprocessor
 from vision_gimbal.config.loader import load_config
+from vision_gimbal.domain.audio import AudioSourceKind
 from vision_gimbal.infrastructure.serial_device_link import SerialDeviceLink
-from vision_gimbal.infrastructure.sounddevice_microphone import SoundDeviceMicrophone
+from vision_gimbal.infrastructure.sounddevice_microphone import SoundDeviceAudioSource
+from vision_gimbal.infrastructure.wasapi_process_loopback import (
+    WasapiProcessLoopbackSource,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Stream 8 kHz PCM_U8 microphone audio to the ultrasonic firmware"
+        description="Stream 8 kHz PCM_U8 live audio to the ultrasonic firmware"
     )
     parser.add_argument(
         "--config",
@@ -34,7 +38,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--serial-port", required=True, help="ESP32 COM port")
     parser.add_argument("--baudrate", type=int, default=460800)
-    parser.add_argument("--input-device", default=None)
+    parser.add_argument(
+        "--source",
+        choices=[source.value for source in AudioSourceKind],
+        default=AudioSourceKind.MICROPHONE.value,
+        help="capture source (default: microphone)",
+    )
+    parser.add_argument(
+        "--input-device",
+        default=None,
+        help="PortAudio input name/index for microphone or stereo_mix",
+    )
     parser.add_argument("--log-jsonl", type=Path, help="save complete transport status once per second")
     parser.add_argument(
         "--record-output",
@@ -46,15 +60,27 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     config = load_config(args.config)
     serial_config = replace(
         config.serial, port=args.serial_port, baudrate=args.baudrate
     )
-    capture_config = replace(
-        config.audio.capture,
-        device=args.input_device if args.input_device is not None else config.audio.capture.device,
-    )
+    selected_source = AudioSourceKind(args.source)
+    if (
+        args.input_device is not None
+        and selected_source is AudioSourceKind.SYSTEM_LOOPBACK
+    ):
+        parser.error("--input-device does not apply to system_loopback")
+    capture_changes = {"source": selected_source.value}
+    if args.input_device is not None:
+        device_field = (
+            "device"
+            if selected_source is AudioSourceKind.MICROPHONE
+            else "stereo_mix_device"
+        )
+        capture_changes[device_field] = args.input_device
+    capture_config = replace(config.audio.capture, **capture_changes)
     recording_config = config.audio.recording
     if args.record_output is not None:
         recording_config = replace(
@@ -70,9 +96,22 @@ def main(argv=None) -> int:
         recording=recording_config,
     )
     link = SerialDeviceLink(serial_config, audio_config.stream.host_queue_packets)
+    stereo_mix_capture = replace(
+        capture_config,
+        device=capture_config.stereo_mix_device,
+        channels=capture_config.stereo_mix_channels,
+    )
     service = AudioService(
         audio_config,
-        SoundDeviceMicrophone(capture_config),
+        {
+            AudioSourceKind.MICROPHONE: SoundDeviceAudioSource(capture_config),
+            AudioSourceKind.STEREO_MIX: SoundDeviceAudioSource(
+                stereo_mix_capture
+            ),
+            AudioSourceKind.SYSTEM_LOOPBACK: WasapiProcessLoopbackSource(
+                capture_config
+            ),
+        },
         AudioPreprocessor(capture_config, audio_config.dsp, audio_config.stream),
         link,
     )
@@ -84,7 +123,10 @@ def main(argv=None) -> int:
             log = args.log_jsonl.open("w", encoding="utf-8")
         link.start()
         service.start()
-        print("Microphone streaming started. Press Ctrl+C to mute and stop.")
+        print(
+            f"{selected_source.value} streaming started. "
+            "Press Ctrl+C to mute and stop."
+        )
         if service.recording_path is not None:
             print(f"Post-limiter recording: {service.recording_path}")
         while True:

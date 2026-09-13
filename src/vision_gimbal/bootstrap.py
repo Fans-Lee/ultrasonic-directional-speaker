@@ -1,6 +1,6 @@
 """Composition root: wire every concrete adapter in one place."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .application.audio_service import AudioService
 from .application.control_service import ControlService
@@ -19,11 +19,13 @@ from .control.command_arbiter import CommandArbiter
 from .control.manual_jog import ManualJogController
 from .control.motion_limiter import GimbalMotionLimiter
 from .control.target_lock import TargetLock
+from .domain.audio import AudioSourceKind
 from .infrastructure.device_gimbal import DeviceGimbalSink
 from .infrastructure.opencv_camera import OpenCVCamera
 from .infrastructure.serial_device_link import create_device_link
-from .infrastructure.sounddevice_microphone import SoundDeviceMicrophone
+from .infrastructure.sounddevice_microphone import SoundDeviceAudioSource
 from .infrastructure.system_clock import SystemClock
+from .infrastructure.wasapi_process_loopback import WasapiProcessLoopbackSource
 from .ui.main_window import MainWindow
 from .ui.qt_workers import QtApplicationRuntime
 from .vision.kalman_smoother import PerTrackKalmanSmoother
@@ -79,9 +81,24 @@ def build_application(config: AppConfig) -> ApplicationBundle:
         clock,
         snapshots,
     )
+    stereo_mix_capture = replace(
+        config.audio.capture,
+        device=config.audio.capture.stereo_mix_device,
+        channels=config.audio.capture.stereo_mix_channels,
+    )
     audio_service = AudioService(
         config.audio,
-        SoundDeviceMicrophone(config.audio.capture),
+        {
+            AudioSourceKind.MICROPHONE: SoundDeviceAudioSource(
+                config.audio.capture
+            ),
+            AudioSourceKind.STEREO_MIX: SoundDeviceAudioSource(
+                stereo_mix_capture
+            ),
+            AudioSourceKind.SYSTEM_LOOPBACK: WasapiProcessLoopbackSource(
+                config.audio.capture
+            ),
+        },
         AudioPreprocessor(config.audio.capture, config.audio.dsp, config.audio.stream),
         device_link,
         RealtimeSpectrumAnalyzer(

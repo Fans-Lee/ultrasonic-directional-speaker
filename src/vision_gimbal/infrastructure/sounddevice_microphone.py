@@ -1,4 +1,4 @@
-"""PortAudio microphone adapter using the optional sounddevice dependency."""
+"""PortAudio capture adapter using the optional sounddevice dependency."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from ..config.schema import AudioCaptureConfig
 from ..ports.microphone import AudioCaptureCallback
 
 
-class SoundDeviceMicrophone:
+class SoundDeviceAudioSource:
     def __init__(self, config: AudioCaptureConfig) -> None:
         self.config = config
         self._stream = None
@@ -25,7 +25,8 @@ class SoundDeviceMicrophone:
                 import sounddevice as sd
             except ImportError as error:
                 raise RuntimeError(
-                    "sounddevice is required for microphone streaming; sync dependencies"
+                    "sounddevice is required for live audio streaming; "
+                    "sync dependencies"
                 ) from error
 
             block_size = round(self.config.sample_rate * self.config.block_ms / 1000)
@@ -57,3 +58,7 @@ class SoundDeviceMicrophone:
         if stream is not None:
             stream.stop()
             stream.close()
+
+
+# Compatibility alias retained for the microphone-only command-line entry point.
+SoundDeviceMicrophone = SoundDeviceAudioSource

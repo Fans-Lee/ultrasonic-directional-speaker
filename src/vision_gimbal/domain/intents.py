@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from .audio import AudioModeSettings
+from .audio import AudioModeSettings, AudioSourceKind
 
 
 class ManualDirection(str, Enum):
@@ -49,6 +49,11 @@ class ConfigureAudio(UserIntent):
 
 
 @dataclass(frozen=True)
+class SelectAudioSource(UserIntent):
+    source: AudioSourceKind
+
+
+@dataclass(frozen=True)
 class ManualKeyChanged(UserIntent):
     direction: ManualDirection
     pressed: bool
@@ -71,6 +76,7 @@ Intent = (
     | StartAudio
     | StopAudio
     | ConfigureAudio
+    | SelectAudioSource
     | ManualKeyChanged
     | ClearManualKeys
     | ShutdownRequested

@@ -50,6 +50,7 @@ def load_config(path: Path | None = None) -> AppConfig:
     model_path = Path(vision.model_path)
     tracker_path = Path(vision.tracker_config_path)
     recording_path = Path(loaded.audio.recording.path)
+    process_loopback_helper = loaded.audio.capture.process_loopback_helper
     spatial_model_path = Path(loaded.spatial_field.depth.model_path)
     if not model_path.is_absolute():
         model_path = (path.parent / model_path).resolve()
@@ -57,6 +58,11 @@ def load_config(path: Path | None = None) -> AppConfig:
         tracker_path = (path.parent / tracker_path).resolve()
     if not recording_path.is_absolute():
         recording_path = (path.parent / recording_path).resolve()
+    if process_loopback_helper:
+        helper_path = Path(process_loopback_helper)
+        if not helper_path.is_absolute():
+            helper_path = (path.parent / helper_path).resolve()
+        process_loopback_helper = str(helper_path)
     if not spatial_model_path.is_absolute():
         spatial_model_path = (path.parent / spatial_model_path).resolve()
     return replace(
@@ -68,6 +74,10 @@ def load_config(path: Path | None = None) -> AppConfig:
         ),
         audio=replace(
             loaded.audio,
+            capture=replace(
+                loaded.audio.capture,
+                process_loopback_helper=process_loopback_helper,
+            ),
             recording=replace(
                 loaded.audio.recording,
                 path=str(recording_path),

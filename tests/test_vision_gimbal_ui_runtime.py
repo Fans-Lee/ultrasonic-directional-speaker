@@ -24,6 +24,7 @@ from vision_gimbal.domain.audio import (
     AudioDriveMode,
     AudioModeSettings,
     AudioProcessingMode,
+    AudioSourceKind,
 )
 from vision_gimbal.domain.control import (
     AutoControlTelemetry,
@@ -31,7 +32,12 @@ from vision_gimbal.domain.control import (
     SerialLinkStatus,
 )
 from vision_gimbal.domain.geometry import GimbalPose
-from vision_gimbal.domain.intents import ConfigureAudio, StartAudio, StopAudio
+from vision_gimbal.domain.intents import (
+    ConfigureAudio,
+    SelectAudioSource,
+    StartAudio,
+    StopAudio,
+)
 from vision_gimbal.domain.state import (
     ControlMode,
     TargetStatus,
@@ -95,6 +101,7 @@ class _FakeAudioService:
     def __init__(self) -> None:
         self.started = False
         self.transmitting = False
+        self.source = AudioSourceKind.MICROPHONE
         self.settings = AudioModeSettings()
         self.errors = []
         self.spectrum_refresh_hz = 20.0
@@ -111,6 +118,9 @@ class _FakeAudioService:
     def configure(self, settings) -> None:
         self.settings = settings
 
+    def select_source(self, source) -> None:
+        self.source = source
+
     def record_error(self, error) -> None:
         self.errors.append(str(error))
 
@@ -118,7 +128,10 @@ class _FakeAudioService:
         return AudioControlStatus(
             enabled=True,
             transmitting=self.transmitting,
-            microphone_open=self.transmitting,
+            selected_source=self.source,
+            active_source=self.source if self.transmitting else None,
+            source_open=self.transmitting,
+            array_active=self.transmitting,
             settings=self.settings,
         )
 
@@ -188,6 +201,10 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         configured = application.tick()
         self.assertEqual(configured.audio.settings, settings)
 
+        application.submit(SelectAudioSource(AudioSourceKind.STEREO_MIX))
+        selected = application.tick()
+        self.assertIs(selected.audio.selected_source, AudioSourceKind.STEREO_MIX)
+
         application.submit(StopAudio())
         stopped = application.tick()
         self.assertFalse(stopped.audio.transmitting)
@@ -218,9 +235,11 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         starts = []
         stops = []
         settings_events = []
+        source_events = []
         panel.start_requested.connect(lambda: starts.append(True))
         panel.stop_requested.connect(lambda: stops.append(True))
         panel.settings_requested.connect(settings_events.append)
+        panel.source_requested.connect(source_events.append)
         snapshot = replace(
             _FakeControlService().tick(),
             serial=SerialLinkStatus(enabled=True, connected=True),
@@ -230,9 +249,11 @@ class QtApplicationRuntimeTests(unittest.TestCase):
 
         self.assertTrue(panel.start_button.isEnabled())
         panel.start_button.click()
+        panel.source_combo.setCurrentIndex(1)
         panel.processing_combo.setCurrentIndex(1)
 
         self.assertEqual(starts, [True])
+        self.assertEqual(source_events, [AudioSourceKind.STEREO_MIX])
         self.assertIs(
             settings_events[-1].processing, AudioProcessingMode.LOUD
         )
@@ -242,7 +263,10 @@ class QtApplicationRuntimeTests(unittest.TestCase):
             audio=AudioControlStatus(
                 enabled=True,
                 transmitting=True,
-                microphone_open=True,
+                selected_source=AudioSourceKind.STEREO_MIX,
+                active_source=AudioSourceKind.STEREO_MIX,
+                source_open=True,
+                array_active=True,
                 settings=AudioModeSettings(
                     processing="loud",
                     drive="boost",

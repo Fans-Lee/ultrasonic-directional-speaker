@@ -3,7 +3,12 @@
 import queue
 from dataclasses import replace
 
-from ..domain.intents import ConfigureAudio, StartAudio, StopAudio
+from ..domain.intents import (
+    ConfigureAudio,
+    SelectAudioSource,
+    StartAudio,
+    StopAudio,
+)
 from .control_service import ControlService
 from .vision_service import VisionService
 
@@ -24,7 +29,9 @@ class ApplicationRuntime:
         self._audio_intents = queue.Queue()
 
     def submit(self, intent) -> None:
-        if isinstance(intent, (StartAudio, StopAudio, ConfigureAudio)):
+        if isinstance(
+            intent, (StartAudio, StopAudio, ConfigureAudio, SelectAudioSource)
+        ):
             self._audio_intents.put(intent)
             return
         self.control.submit(intent)
@@ -82,5 +89,7 @@ class ApplicationRuntime:
                     self.audio.stop_transmitting()
                 elif isinstance(intent, ConfigureAudio):
                     self.audio.configure(intent.settings)
+                elif isinstance(intent, SelectAudioSource):
+                    self.audio.select_source(intent.source)
             except Exception as error:  # noqa: BLE001 - user-action boundary
                 self.audio.record_error(error)
