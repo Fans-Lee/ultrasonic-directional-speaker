@@ -4,9 +4,12 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
+    QLabel,
     QMainWindow,
-    QSplitter,
+    QScrollArea,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -35,6 +38,7 @@ from .presenter import present
 from .sound_field_panel import SoundFieldPanel
 from .spectrum_panel import SpectrumPanel
 from .status_panel import StatusPanel
+from .theme import APP_STYLESHEET
 from .video_canvas import VideoCanvas
 
 
@@ -51,34 +55,73 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle(config.window_title)
         self.resize(config.initial_width, config.initial_height)
+        self.setMinimumSize(1080, 680)
+        self.setStyleSheet(APP_STYLESHEET)
 
         central = QWidget()
+        central.setObjectName("appRoot")
         root = QHBoxLayout(central)
-        visual_splitter = QSplitter(Qt.Orientation.Vertical)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(16)
+
+        visual_workspace = QFrame()
+        visual_workspace.setObjectName("visualWorkspace")
+        workspace_layout = QVBoxLayout(visual_workspace)
+        workspace_layout.setContentsMargins(18, 14, 18, 18)
+        workspace_layout.setSpacing(8)
+
+        visual_header = QWidget()
+        visual_header_layout = QVBoxLayout(visual_header)
+        visual_header_layout.setContentsMargins(2, 0, 2, 0)
+        visual_header_layout.setSpacing(2)
+        eyebrow = QLabel("LIVE CONTROL")
+        eyebrow.setProperty("role", "eyebrow")
+        visual_header_layout.addWidget(eyebrow)
+        title = QLabel("视觉与声束监控")
+        title.setProperty("role", "app-title")
+        visual_header_layout.addWidget(title)
+        workspace_layout.addWidget(visual_header)
+
+        self.visual_tabs = QTabWidget()
+        self.visual_tabs.setDocumentMode(True)
         self.video = VideoCanvas()
         self.sound_field = SoundFieldPanel()
         self.spectrum = SpectrumPanel()
-        visual_splitter.addWidget(self.video)
-        visual_splitter.addWidget(self.sound_field)
-        visual_splitter.addWidget(self.spectrum)
-        self.sound_field.setVisible(spatial_enabled)
-        self.spectrum.setVisible(spectrum_enabled)
-        visual_splitter.setStretchFactor(0, 3)
-        visual_splitter.setStretchFactor(1, 1)
-        visual_splitter.setStretchFactor(2, 1)
-        visual_splitter.setSizes([360, 240, 160])
-        root.addWidget(visual_splitter, 1)
+        self.visual_tabs.addTab(self.video, "追踪画面")
+        if spatial_enabled:
+            self.visual_tabs.addTab(self.sound_field, "声场模拟")
+        if spectrum_enabled:
+            self.visual_tabs.addTab(self.spectrum, "实时频谱")
+        workspace_layout.addWidget(self.visual_tabs, 1)
+        root.addWidget(visual_workspace, 1)
 
         sidebar = QWidget()
-        sidebar.setFixedWidth(350)
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(360)
         sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+
+        sidebar_scroll = QScrollArea()
+        sidebar_scroll.setWidgetResizable(True)
+        sidebar_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        sidebar_content = QWidget()
+        sidebar_content.setObjectName("sidebarContent")
+        sidebar_content.setMinimumWidth(342)
+        sidebar_content_layout = QVBoxLayout(sidebar_content)
+        sidebar_content_layout.setContentsMargins(0, 0, 4, 0)
+        sidebar_content_layout.setSpacing(12)
+
         self.controls = ControlPanel()
         self.audio = AudioPanel()
         self.status = StatusPanel()
-        sidebar_layout.addWidget(self.controls)
-        sidebar_layout.addWidget(self.audio)
-        sidebar_layout.addStretch(1)
-        sidebar_layout.addWidget(self.status)
+        sidebar_content_layout.addWidget(self.controls)
+        sidebar_content_layout.addWidget(self.audio)
+        sidebar_content_layout.addWidget(self.status)
+        sidebar_content_layout.addStretch(1)
+        sidebar_scroll.setWidget(sidebar_content)
+        sidebar_layout.addWidget(sidebar_scroll)
         root.addWidget(sidebar)
         self.setCentralWidget(central)
 

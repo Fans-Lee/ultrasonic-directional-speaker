@@ -2,7 +2,7 @@
 
 import cv2
 from PySide6.QtCore import QRect, Qt, Signal
-from PySide6.QtGui import QImage, QMouseEvent, QPainter, QPaintEvent, QPixmap
+from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPaintEvent, QPixmap
 from PySide6.QtWidgets import QWidget
 
 from ..application.vision_service import DisplayFrame
@@ -16,13 +16,13 @@ class VideoCanvas(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("videoCanvas")
         self._display_frame = None
         self._state = None
         self._pixmap = None
         self.setMinimumSize(640, 360)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.CrossCursor)
-        self.setStyleSheet("background: #111827;")
 
     def set_display_frame(self, display_frame: DisplayFrame) -> None:
         self._display_frame = display_frame
@@ -57,9 +57,9 @@ class VideoCanvas(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:
         del event
         painter = QPainter(self)
-        painter.fillRect(self.rect(), Qt.GlobalColor.black)
+        painter.fillRect(self.rect(), QColor("#07101e"))
         if self._pixmap is None:
-            painter.setPen(Qt.GlobalColor.white)
+            painter.setPen(QColor("#a8b9cf"))
             painter.drawText(
                 self.rect(), Qt.AlignmentFlag.AlignCenter, "等待摄像头画面…"
             )
