@@ -8,21 +8,34 @@ from types import SimpleNamespace
 import numpy as np
 
 
-CV_TEST_DIR = Path(__file__).resolve().parents[1] / "src" / "cv_test"
-sys.path.insert(0, str(CV_TEST_DIR))
+SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(SRC_DIR))
 
-from multi_person_tracker import (  # noqa: E402
-    UltralyticsMultiPersonTracker,
+from vision_gimbal.config.schema import VisionConfig  # noqa: E402
+from vision_gimbal.domain.tracking import TrackedPerson  # noqa: E402
+from vision_gimbal.vision.duplicate_filter import (  # noqa: E402
     suppress_duplicate_people,
 )
-from per_track_smoother import PerTrackAimSmoother  # noqa: E402
-from tracking_models import TrackedPerson  # noqa: E402
+from vision_gimbal.vision.kalman_smoother import (  # noqa: E402
+    PerTrackKalmanSmoother,
+)
+from vision_gimbal.vision.yolo_bytetrack import (  # noqa: E402
+    YOLOByteTrackPeopleTracker,
+)
 
 
 def _person(track_id, bbox, confidence=0.8):
     x1, y1, x2, y2 = bbox
     center = ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
     return TrackedPerson(track_id, bbox, center, center, confidence)
+
+
+def _suppress(people):
+    return suppress_duplicate_people(
+        people,
+        iou_threshold=0.70,
+        containment_threshold=0.90,
+    )
 
 
 class DuplicateSuppressionTests(unittest.TestCase):
@@ -32,7 +45,7 @@ class DuplicateSuppressionTests(unittest.TestCase):
             _person(8, (13.0, 12.0, 108.0, 208.0), 0.91),
         ]
 
-        result = suppress_duplicate_people(people)
+        result = _suppress(people)
 
         self.assertEqual([person.track_id for person in result], [8])
 
@@ -42,7 +55,7 @@ class DuplicateSuppressionTests(unittest.TestCase):
             _person(2, (90.0, 10.0, 190.0, 210.0)),
         ]
 
-        result = suppress_duplicate_people(people)
+        result = _suppress(people)
 
         self.assertEqual([person.track_id for person in result], [1, 2])
 
@@ -52,7 +65,7 @@ class DuplicateSuppressionTests(unittest.TestCase):
             _person(2, (100.0, 100.0, 180.0, 300.0), 0.8),
         ]
 
-        result = suppress_duplicate_people(people)
+        result = _suppress(people)
 
         self.assertEqual([person.track_id for person in result], [1, 2])
 
@@ -81,10 +94,13 @@ class TrackerIntegrationTests(unittest.TestCase):
                 return [SimpleNamespace(boxes=FakeBoxes())]
 
         fake_model = FakeModel()
-        tracker = UltralyticsMultiPersonTracker(
-            model_path="unused.pt",
-            tracker_config_path="unused.yaml",
-            nms_iou_threshold=0.6,
+        tracker = YOLOByteTrackPeopleTracker(
+            VisionConfig(
+                model_path="unused.pt",
+                tracker_config_path="unused.yaml",
+                nms_iou_threshold=0.6,
+                device="cpu",
+            ),
             model=fake_model,
         )
 
@@ -96,7 +112,7 @@ class TrackerIntegrationTests(unittest.TestCase):
 
 class PredictionSuppressionTests(unittest.TestCase):
     def test_new_id_replaces_overlapping_old_prediction(self):
-        smoother = PerTrackAimSmoother(max_prediction_frames=30)
+        smoother = PerTrackKalmanSmoother(VisionConfig(max_prediction_frames=30))
         smoother.update([_person(1, (10.0, 10.0, 110.0, 210.0))], 1 / 30)
 
         result = smoother.update(
@@ -108,7 +124,7 @@ class PredictionSuppressionTests(unittest.TestCase):
         self.assertTrue(result[0].observed)
 
     def test_non_overlapping_old_track_is_still_predicted(self):
-        smoother = PerTrackAimSmoother(max_prediction_frames=30)
+        smoother = PerTrackKalmanSmoother(VisionConfig(max_prediction_frames=30))
         smoother.update([_person(1, (10.0, 10.0, 110.0, 210.0))], 1 / 30)
 
         result = smoother.update(

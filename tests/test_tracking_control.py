@@ -1,4 +1,4 @@
-"""Unit tests for target selection and visual gimbal control."""
+"""Unit tests for the current visual-gimbal control primitives."""
 
 import math
 import sys
@@ -6,130 +6,99 @@ import unittest
 from pathlib import Path
 
 
-CV_TEST_DIR = Path(__file__).resolve().parents[1] / "src" / "cv_test"
-sys.path.insert(0, str(CV_TEST_DIR))
+SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(SRC_DIR))
 
-from camera_geometry import CameraGeometry, CameraGeometryConfig  # noqa: E402
-from close_range_aim import (  # noqa: E402
-    CloseRangeAimConfig,
-    CloseRangeAimPolicy,
-)
-from control_models import (  # noqa: E402
-    AimObservation,
-    GimbalSetpoint,
-    SerialLinkStatus,
-)
-from gimbal_serial import encode_gimbal_command  # noqa: E402
-from target_selector import TargetSelector, TargetSelectorConfig  # noqa: E402
-from tracking_controller import (  # noqa: E402
-    TrackingController,
-    TrackingControllerConfig,
-)
-from tracking_models import TrackedPerson  # noqa: E402
-from visual_servo import (  # noqa: E402
+from vision_gimbal.config.schema import (  # noqa: E402
+    AutoControlConfig,
+    AxisMotionConfig,
     AxisPidConfig,
-    VisualServoConfig,
-    VisualServoController,
+    CameraProjectionConfig,
+    CloseRangeConfig,
+    GimbalMotionConfig,
+    TargetLockConfig,
+)
+from vision_gimbal.control.auto_tracking import AutoTrackingController  # noqa: E402
+from vision_gimbal.control.camera_projection import CameraProjection  # noqa: E402
+from vision_gimbal.control.close_range_aim import CloseRangeAimPolicy  # noqa: E402
+from vision_gimbal.control.motion_limiter import GimbalMotionLimiter  # noqa: E402
+from vision_gimbal.control.target_lock import TargetLock  # noqa: E402
+from vision_gimbal.domain.state import TargetStatus  # noqa: E402
+from vision_gimbal.domain.tracking import (  # noqa: E402
+    TargetObservation,
+    TrackedPerson,
+    VisionSnapshot,
 )
 
 
-def _person(track_id, center, confidence=0.8, observed=True):
-    x, y = center
-    return TrackedPerson(
+def _observation(
+    track_id=1,
+    aim_point=(50.0, 50.0),
+    bbox=(20.0, 20.0, 80.0, 80.0),
+    timestamp_s=1.0,
+    observed=True,
+):
+    return TargetObservation(
+        timestamp_s=timestamp_s,
         track_id=track_id,
-        bbox_xyxy=(x - 10.0, y - 20.0, x + 10.0, y + 20.0),
-        detection_center=center,
-        aim_point=center,
-        confidence=confidence,
+        aim_point=aim_point,
+        confidence=0.9,
         observed=observed,
+        bbox_xyxy=bbox,
     )
 
 
-class _RecordingGimbal:
-    def __init__(self):
-        self.commands = []
-        self.started = False
-
-    def start(self):
-        self.started = True
-
-    def publish(self, setpoint):
-        self.commands.append(setpoint)
-
-    def status(self):
-        return SerialLinkStatus(enabled=False, connected=False)
-
-    def close(self):
-        self.started = False
-
-
-class TargetSelectorTests(unittest.TestCase):
-    def test_locks_nearest_observed_person(self):
-        selector = TargetSelector(TargetSelectorConfig())
-
-        first = selector.update(
-            [_person(1, (15.0, 15.0)), _person(2, (52.0, 51.0))],
-            timestamp_s=1.0,
-            aim_center=(50.0, 50.0),
+class TargetLockTests(unittest.TestCase):
+    def test_releases_only_the_explicit_target_after_timeout(self):
+        target_lock = TargetLock(
+            TargetLockConfig(prediction_timeout_s=0.2, release_timeout_s=0.5)
         )
-        second = selector.update(
-            [_person(1, (50.0, 50.0)), _person(2, (70.0, 50.0))],
-            timestamp_s=1.1,
-            aim_center=(50.0, 50.0),
+        target_lock.lock(3)
+        person = TrackedPerson(
+            3,
+            (40.0, 30.0, 60.0, 70.0),
+            (50.0, 50.0),
+            (50.0, 50.0),
+            0.9,
         )
+        observed = VisionSnapshot(1, 2.0, (100, 100), (person,))
+        missing = VisionSnapshot(2, 2.3, (100, 100), ())
 
-        self.assertEqual(first.track_id, 2)
-        self.assertEqual(second.track_id, 2)
+        self.assertEqual(
+            target_lock.resolve(observed, 2.0).status,
+            TargetStatus.OBSERVED,
+        )
+        interim = target_lock.resolve(missing, 2.3)
+        expired = target_lock.resolve(missing, 2.6)
 
-    def test_releases_target_after_timeout(self):
-        selector = TargetSelector(
-            TargetSelectorConfig(
-                prediction_timeout_s=0.2,
-                release_timeout_s=0.5,
-            )
-        )
-        selector.update(
-            [_person(3, (50.0, 50.0))],
-            timestamp_s=2.0,
-            aim_center=(50.0, 50.0),
-        )
-
-        self.assertIsNone(
-            selector.update([], 2.3, aim_center=(50.0, 50.0))
-        )
-        self.assertEqual(selector.selected_track_id, 3)
-        self.assertIsNone(
-            selector.update([], 2.6, aim_center=(50.0, 50.0))
-        )
-        self.assertIsNone(selector.selected_track_id)
+        self.assertEqual(interim.status, TargetStatus.LOST)
+        self.assertFalse(interim.released)
+        self.assertTrue(expired.released)
+        self.assertEqual(target_lock.track_id, 3)
 
 
-class CameraGeometryTests(unittest.TestCase):
+class CameraProjectionTests(unittest.TestCase):
     def test_converts_edge_displacement_to_angle(self):
-        geometry = CameraGeometry(
-            CameraGeometryConfig(
+        projection = CameraProjection(
+            CameraProjectionConfig(
                 horizontal_fov_deg=90.0,
                 vertical_fov_deg=90.0,
             )
         )
-        observation = AimObservation(
-            timestamp_s=1.0,
-            track_id=1,
-            aim_point=(100.0, 100.0),
-            confidence=0.9,
-            observed=True,
+
+        error = projection.error(
+            _observation(aim_point=(100.0, 100.0)),
+            (100, 100),
         )
 
-        pan, tilt = geometry.error_angles_deg(observation, (100, 100))
-
-        self.assertTrue(math.isclose(pan, -45.0, abs_tol=1e-6))
-        self.assertTrue(math.isclose(tilt, -45.0, abs_tol=1e-6))
+        self.assertTrue(math.isclose(error.pan_degrees, -45.0, abs_tol=1e-6))
+        self.assertTrue(math.isclose(error.tilt_degrees, -45.0, abs_tol=1e-6))
 
 
 class CloseRangeAimPolicyTests(unittest.TestCase):
     def test_uses_upper_body_after_confirmed_oversized_box(self):
         policy = CloseRangeAimPolicy(
-            CloseRangeAimConfig(
+            CloseRangeConfig(
                 enter_height_ratio=0.90,
                 exit_height_ratio=0.70,
                 upper_body_fraction=0.30,
@@ -138,17 +107,19 @@ class CloseRangeAimPolicyTests(unittest.TestCase):
                 ratio_ema_alpha=1.0,
             )
         )
-        full_height = AimObservation(
-            timestamp_s=1.0,
+        first_observation = _observation(
             track_id=6,
-            aim_point=(50.0, 50.0),
-            confidence=0.9,
-            observed=True,
-            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
+            bbox=(20.0, 0.0, 80.0, 100.0),
+            timestamp_s=1.0,
+        )
+        second_observation = _observation(
+            track_id=6,
+            bbox=(20.0, 0.0, 80.0, 100.0),
+            timestamp_s=1.1,
         )
 
-        first, first_status = policy.update(full_height, (100, 100))
-        second, second_status = policy.update(full_height, (100, 100))
+        first, first_status = policy.update(first_observation, (100, 100))
+        second, second_status = policy.update(second_observation, (100, 100))
 
         self.assertFalse(first_status.active)
         self.assertEqual(first.aim_point, (50.0, 50.0))
@@ -157,32 +128,33 @@ class CloseRangeAimPolicyTests(unittest.TestCase):
 
     def test_exits_only_when_smaller_box_is_fully_visible(self):
         policy = CloseRangeAimPolicy(
-            CloseRangeAimConfig(
+            CloseRangeConfig(
                 enter_confirmed_frames=1,
                 exit_confirmed_frames=2,
                 ratio_ema_alpha=1.0,
             )
         )
-        full_height = AimObservation(
-            timestamp_s=1.0,
-            track_id=6,
-            aim_point=(50.0, 50.0),
-            confidence=0.9,
-            observed=True,
-            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
+        policy.update(
+            _observation(track_id=6, bbox=(20.0, 0.0, 80.0, 100.0)),
+            (100, 100),
         )
-        smaller_visible = AimObservation(
-            timestamp_s=1.1,
-            track_id=6,
-            aim_point=(50.0, 50.0),
-            confidence=0.9,
-            observed=True,
-            bbox_xyxy=(20.0, 20.0, 80.0, 80.0),
-        )
-        policy.update(full_height, (100, 100))
 
-        first, first_status = policy.update(smaller_visible, (100, 100))
-        second, second_status = policy.update(smaller_visible, (100, 100))
+        first, first_status = policy.update(
+            _observation(
+                track_id=6,
+                bbox=(20.0, 20.0, 80.0, 80.0),
+                timestamp_s=1.1,
+            ),
+            (100, 100),
+        )
+        second, second_status = policy.update(
+            _observation(
+                track_id=6,
+                bbox=(20.0, 20.0, 80.0, 80.0),
+                timestamp_s=1.2,
+            ),
+            (100, 100),
+        )
 
         self.assertTrue(first_status.active)
         self.assertNotEqual(first.aim_point, (50.0, 50.0))
@@ -190,91 +162,73 @@ class CloseRangeAimPolicyTests(unittest.TestCase):
         self.assertEqual(second.aim_point, (50.0, 50.0))
 
     def test_prediction_cannot_enter_close_range_mode(self):
-        policy = CloseRangeAimPolicy(
-            CloseRangeAimConfig(enter_confirmed_frames=1)
-        )
-        predicted = AimObservation(
-            timestamp_s=1.0,
-            track_id=6,
-            aim_point=(50.0, 50.0),
-            confidence=0.9,
-            observed=False,
-            bbox_xyxy=(20.0, 0.0, 80.0, 100.0),
-        )
+        policy = CloseRangeAimPolicy(CloseRangeConfig(enter_confirmed_frames=1))
 
-        result, status = policy.update(predicted, (100, 100))
+        result, status = policy.update(
+            _observation(
+                track_id=6,
+                bbox=(20.0, 0.0, 80.0, 100.0),
+                observed=False,
+            ),
+            (100, 100),
+        )
 
         self.assertFalse(status.active)
         self.assertEqual(result.aim_point, (50.0, 50.0))
 
 
-class VisualServoTests(unittest.TestCase):
-    def test_moves_towards_target_and_respects_angle_limit(self):
-        axis = AxisPidConfig(
+class AutoTrackingTests(unittest.TestCase):
+    def test_request_moves_towards_target_and_motion_limiter_clamps_pose(self):
+        pid = AxisPidConfig(
             kp=2.0,
             ki=0.0,
             kd=0.0,
             deadband_deg=0.0,
-            max_speed_deg_s=100.0,
-            max_accel_deg_s2=1000.0,
+            integral_limit=10.0,
+            output_limit_deg_s=100.0,
+        )
+        axis_motion = AxisMotionConfig(
             min_angle_deg=-2.0,
             max_angle_deg=2.0,
+            max_speed_deg_s=100.0,
+            max_accel_deg_s2=1000.0,
         )
-        servo = VisualServoController(
-            VisualServoConfig(pan=axis, tilt=axis),
-            CameraGeometry(
-                CameraGeometryConfig(
+        motion = GimbalMotionConfig(
+            pan=axis_motion,
+            tilt=axis_motion,
+            nominal_dt_s=0.1,
+            maximum_dt_s=0.5,
+        )
+        automatic = AutoTrackingController(
+            AutoControlConfig(
+                pan_pid=pid,
+                tilt_pid=pid,
+                nominal_dt_s=0.1,
+                maximum_dt_s=0.5,
+            ),
+            CameraProjection(
+                CameraProjectionConfig(
                     horizontal_fov_deg=90.0,
                     vertical_fov_deg=90.0,
                 )
             ),
+            CloseRangeAimPolicy(CloseRangeConfig()),
+            motion,
         )
-        observation = AimObservation(
-            timestamp_s=1.0,
-            track_id=4,
-            aim_point=(100.0, 50.0),
-            confidence=0.9,
-            observed=True,
+        limiter = GimbalMotionLimiter(motion)
+
+        request, telemetry = automatic.update(
+            _observation(track_id=4, aim_point=(100.0, 50.0)),
+            (100, 100),
+            1.0,
+            limiter.pose,
         )
+        setpoint = limiter.update(request, 1.0)
 
-        output = servo.update(observation, (100, 100), 1.0)
-        for index in range(1, 5):
-            output = servo.update(
-                observation,
-                (100, 100),
-                1.0 + index * 0.1,
-            )
-
-        self.assertIsNotNone(output.setpoint)
-        self.assertEqual(output.setpoint.pan_degrees, -2.0)
-        self.assertEqual(output.setpoint.tilt_degrees, 0.0)
-
-
-class TrackingControllerTests(unittest.TestCase):
-    def test_limits_command_publication_rate(self):
-        gimbal = _RecordingGimbal()
-        controller = TrackingController(
-            TrackingControllerConfig(update_hz=10.0),
-            gimbal,
-        )
-        people = [_person(8, (80.0, 50.0))]
-
-        controller.start()
-        controller.update(people, (100, 100), 10.0)
-        controller.update(people, (100, 100), 10.05)
-        controller.update(people, (100, 100), 10.11)
-        controller.close()
-
-        self.assertEqual(len(gimbal.commands), 2)
-
-
-class GimbalProtocolTests(unittest.TestCase):
-    def test_encodes_existing_firmware_syntax(self):
-        command = encode_gimbal_command(
-            GimbalSetpoint(1.0, pan_degrees=-12.4, tilt_degrees=8.2)
-        )
-
-        self.assertEqual(command, b"(-12,8)")
+        self.assertLess(request.pan_velocity_deg_s, 0.0)
+        self.assertEqual(setpoint.pan_degrees, -2.0)
+        self.assertEqual(setpoint.tilt_degrees, 0.0)
+        self.assertTrue(telemetry.target_observed)
 
 
 if __name__ == "__main__":
