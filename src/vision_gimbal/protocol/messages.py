@@ -81,7 +81,7 @@ class StreamStart:
     processing: AudioProcessing = AudioProcessing.RAW
     drive: AudioDrive = AudioDrive.STANDARD
     underflow_policy: int = 1
-    data_timeout_ms: int = 100
+    data_timeout_ms: int = 500
 
     def __post_init__(self) -> None:
         if self.sample_rate != 8000 or self.channels != 1:

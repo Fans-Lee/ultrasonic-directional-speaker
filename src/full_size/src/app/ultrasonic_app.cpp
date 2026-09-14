@@ -866,20 +866,29 @@ void UltrasonicApp::stopStream(uint32_t requestSequence) {
 
 void UltrasonicApp::setProtocolMute(bool enabled,
                                     uint32_t requestSequence) {
-  protocolMuted_ = enabled;
   if (enabled) {
     stopSampleTimer();
     driver_.stop();
-    protocolStreamState_ = modulationEngine_.streaming()
-                               ? ProtocolStreamState::kMuted
-                               : ProtocolStreamState::kIdle;
     if (requestSequence == UINT32_MAX) {
-      modulationEngine_.stop();
-      protocolStreamState_ = ProtocolStreamState::kMuted;
+      // A receive timeout is a recoverable discontinuity, not an explicit
+      // user mute. Keep the stream buffer alive so the next AUDIO_DATA blocks
+      // can prefill it and restart playback without another STREAM_START.
+      protocolMuted_ = false;
+      protocolStreamState_ = modulationEngine_.streaming()
+                                 ? ProtocolStreamState::kPrefill
+                                 : ProtocolStreamState::kIdle;
+    } else {
+      protocolMuted_ = true;
+      protocolStreamState_ = modulationEngine_.streaming()
+                                 ? ProtocolStreamState::kMuted
+                                 : ProtocolStreamState::kIdle;
     }
-  } else if (modulationEngine_.streaming()) {
-    protocolStreamState_ = ProtocolStreamState::kPrefill;
-    maybeStartStreamPlayback();
+  } else {
+    protocolMuted_ = false;
+    if (modulationEngine_.streaming()) {
+      protocolStreamState_ = ProtocolStreamState::kPrefill;
+      maybeStartStreamPlayback();
+    }
   }
   if (requestSequence != UINT32_MAX) {
     protocol_.sendAck(ProtocolMessageType::kSetMute, requestSequence);

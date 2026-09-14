@@ -33,7 +33,9 @@ class CameraCalibrationConfig:
             raise ValueError("camera calibration cy must lie within reference height")
         values = tuple(float(value) for value in self.distortion)
         if len(values) != 5 or not all(isfinite(value) for value in values):
-            raise ValueError("camera calibration distortion must contain five finite values")
+            raise ValueError(
+                "camera calibration distortion must contain five finite values"
+            )
         object.__setattr__(self, "distortion", values)
 
 
@@ -256,6 +258,9 @@ class AudioCaptureConfig:
     stereo_mix_device: str | int | None = "立体声混音"
     stereo_mix_channels: int = 2
     process_loopback_helper: str = ""
+    process_loopback_stall_timeout_ms: int = 1000
+    process_loopback_restart_initial_ms: int = 250
+    process_loopback_restart_max_ms: int = 5000
     block_ms: int = 10
     queue_ms: int = 100
 
@@ -271,14 +276,23 @@ class AudioCaptureConfig:
                 "or system_loopback"
             )
         object.__setattr__(self, "source", normalized_source)
-        if (
-            self.sample_rate <= 0
-            or self.channels <= 0
-            or self.stereo_mix_channels <= 0
-        ):
+        if self.sample_rate <= 0 or self.channels <= 0 or self.stereo_mix_channels <= 0:
             raise ValueError("audio capture rate and channels must be positive")
         if self.block_ms <= 0 or self.queue_ms < self.block_ms:
             raise ValueError("audio capture queue must hold at least one block")
+        if self.process_loopback_stall_timeout_ms < max(100, self.block_ms * 5):
+            raise ValueError(
+                "process-loopback stall timeout must cover at least five blocks"
+            )
+        if self.process_loopback_restart_initial_ms <= 0:
+            raise ValueError("process-loopback restart delay must be positive")
+        if (
+            self.process_loopback_restart_max_ms
+            < self.process_loopback_restart_initial_ms
+        ):
+            raise ValueError(
+                "process-loopback maximum restart delay must cover its initial delay"
+            )
 
 
 @dataclass(frozen=True)
@@ -338,7 +352,7 @@ class AudioStreamConfig:
     packet_ms: int = 20
     prebuffer_ms: int = 60
     device_buffer_ms: int = 256
-    data_timeout_ms: int = 100
+    data_timeout_ms: int = 500
     host_queue_packets: int = 8
     processing: str = "raw"
     boost: bool = False
@@ -480,14 +494,18 @@ class SpatialDepthConfig:
 
     def __post_init__(self) -> None:
         if self.backend.lower() not in {"openvino", "ultralytics"}:
-            raise ValueError("spatial_field.depth.backend must be openvino or ultralytics")
+            raise ValueError(
+                "spatial_field.depth.backend must be openvino or ultralytics"
+            )
         for name in (
             "input_width",
             "input_height",
         ):
             value = getattr(self, name)
             if value <= 0 or value % 32:
-                raise ValueError(f"spatial_field.depth.{name} must be a positive multiple of 32")
+                raise ValueError(
+                    f"spatial_field.depth.{name} must be a positive multiple of 32"
+                )
         if not 0.0 < self.min_depth_m < self.max_depth_m:
             raise ValueError("spatial field depth range must satisfy 0 < min < max")
         if not self.model_path.strip() or not self.device.strip():

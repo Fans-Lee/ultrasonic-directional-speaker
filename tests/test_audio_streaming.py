@@ -2,12 +2,15 @@
 
 import math
 import sys
+import threading
 import time
 import unittest
 import wave
 from dataclasses import replace
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import numpy as np
 
@@ -19,7 +22,11 @@ from vision_gimbal.audio.preprocessor import AudioPreprocessor
 from vision_gimbal.audio.recording import PostLimiterWavRecorder
 from vision_gimbal.audio.resampler import StreamingLinearResampler
 from vision_gimbal.config.loader import load_config
-from vision_gimbal.config.schema import AudioConfig, AudioRecordingConfig
+from vision_gimbal.config.schema import (
+    AudioCaptureConfig,
+    AudioConfig,
+    AudioRecordingConfig,
+)
 from vision_gimbal.domain.audio import (
     AudioDriveMode,
     AudioModeSettings,
@@ -28,11 +35,15 @@ from vision_gimbal.domain.audio import (
     AudioSourceKind,
     AudioStreamTelemetry,
 )
+from vision_gimbal.infrastructure.wasapi_process_loopback import (
+    WasapiProcessLoopbackSource,
+)
 from vision_gimbal.protocol.messages import (
     AudioDrive,
     AudioModulation,
     AudioProcessing,
     StreamStart,
+    StreamState,
 )
 
 
@@ -59,6 +70,7 @@ class _DeviceLink:
         self.mutes = []
         self.stopped = False
         self.stop_count = 0
+        self.telemetry = AudioStreamTelemetry()
 
     def start_audio_stream(self, parameters: StreamStart) -> None:
         self.parameters = parameters
@@ -75,7 +87,67 @@ class _DeviceLink:
         self.mutes.append(enabled)
 
     def audio_status(self) -> AudioStreamTelemetry:
-        return AudioStreamTelemetry()
+        return self.telemetry
+
+
+class _BlockingPipe:
+    def __init__(self) -> None:
+        self.released = threading.Event()
+
+    def read(self, _size: int) -> bytes:
+        self.released.wait(timeout=2.0)
+        return b""
+
+
+class _FakeProcess:
+    def __init__(self, *, blocking_stdout: bool = False) -> None:
+        self.stdout = _BlockingPipe() if blocking_stdout else BytesIO()
+        self.stderr = BytesIO()
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.returncode = -15
+        if isinstance(self.stdout, _BlockingPipe):
+            self.stdout.released.set()
+
+    def kill(self) -> None:
+        self.terminate()
+
+    def wait(self, timeout=None):
+        del timeout
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
+
+class _RecoveringLoopbackSource(WasapiProcessLoopbackSource):
+    def __init__(self, config: AudioCaptureConfig) -> None:
+        super().__init__(config)
+        self.launch_count = 0
+        self.monitor_count = 0
+
+    def _resolve_helper(self) -> Path:
+        return Path(__file__)
+
+    def _ensure_helper(self, helper: Path) -> None:
+        del helper
+
+    def _launch_process(self, helper: Path):
+        del helper
+        self.launch_count += 1
+        return _FakeProcess(), 2
+
+    def _monitor_process(self, process, callback, channels):
+        del callback, channels
+        self.monitor_count += 1
+        if self.monitor_count == 1:
+            self._terminate_process(process)
+            return "simulated EOF", True
+        self._stop_event.wait(timeout=2.0)
+        return "", True
 
 
 class _SpectrumAnalyzer:
@@ -125,6 +197,47 @@ class StreamingResamplerTests(unittest.TestCase):
         self.assertEqual(second.size, 80)
 
 
+class WasapiProcessLoopbackSourceTests(unittest.TestCase):
+    def test_supervisor_restarts_helper_after_unexpected_eof(self):
+        config = replace(
+            AudioCaptureConfig(),
+            process_loopback_restart_initial_ms=10,
+            process_loopback_restart_max_ms=20,
+        )
+        source = _RecoveringLoopbackSource(config)
+
+        with patch(
+            "vision_gimbal.infrastructure.wasapi_process_loopback.sys.platform",
+            "win32",
+        ):
+            source.start(lambda _block: None)
+            deadline = time.monotonic() + 1.0
+            while source.restart_count == 0 and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertEqual(source.launch_count, 2)
+            self.assertEqual(source.restart_count, 1)
+            self.assertTrue(source.is_open)
+            source.close()
+
+        self.assertFalse(source.is_open)
+
+    def test_monitor_terminates_helper_when_pcm_pipe_stalls(self):
+        config = replace(AudioCaptureConfig(), process_loopback_stall_timeout_ms=100)
+        source = WasapiProcessLoopbackSource(config)
+        process = _FakeProcess(blocking_stdout=True)
+        with source._lock:
+            source._process = process
+            source._last_block_at = time.monotonic()
+
+        error, produced_blocks = source._monitor_process(
+            process, lambda _block: None, 2
+        )
+
+        self.assertIn("PCM pipe stalled for 100 ms", error)
+        self.assertFalse(produced_blocks)
+        self.assertIsNotNone(process.poll())
+
+
 class AudioPreprocessorTests(unittest.TestCase):
     def test_emits_80_unsigned_samples_for_ten_milliseconds(self):
         config = AudioConfig(enabled=True)
@@ -168,9 +281,7 @@ class AudioServiceTests(unittest.TestCase):
             boost=True,
             modulation="sram",
         )
-        config = replace(
-            AudioConfig(enabled=True), auto_start=False, stream=stream
-        )
+        config = replace(AudioConfig(enabled=True), auto_start=False, stream=stream)
         microphone = _Microphone()
         link = _DeviceLink()
         service = AudioService(
@@ -327,6 +438,36 @@ class AudioServiceTests(unittest.TestCase):
         service.close()
 
         self.assertGreaterEqual(len(link.parameter_history), 2)
+
+    def test_fresh_muted_device_status_rearms_an_active_host_stream(self):
+        config = replace(AudioConfig(enabled=True), auto_start=True)
+        microphone = _Microphone()
+        link = _DeviceLink()
+        link.telemetry = AudioStreamTelemetry(
+            state=StreamState.MUTED,
+            muted=True,
+            status_age_ms=0,
+        )
+        service = AudioService(
+            config,
+            {AudioSourceKind.MICROPHONE: microphone},
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+        )
+
+        service.start()
+        with service._state_lock:
+            service._device_stream_started_at = time.monotonic() - 2.0
+        block = np.zeros((480, 1), dtype=np.float32)
+        microphone.callback(block)
+        microphone.callback(block)
+        deadline = time.monotonic() + 1.0
+        while len(link.parameter_history) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        service.close()
+
+        self.assertEqual(len(link.parameter_history), 2)
+        self.assertGreaterEqual(link.mutes.count(False), 2)
 
     def test_spectrum_tap_follows_audio_lifecycle(self):
         config = replace(AudioConfig(enabled=True), auto_start=True)

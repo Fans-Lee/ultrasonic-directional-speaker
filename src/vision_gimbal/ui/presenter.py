@@ -69,6 +69,8 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         f"欠载 {telemetry.underrun_count} · 主机丢包 "
         f"{telemetry.host_tx_overrun_count + telemetry.host_capture_overrun_count}"
     )
+    if telemetry.host_capture_restart_count:
+        audio_detail += f" · 回环重启 {telemetry.host_capture_restart_count}"
     if audio.last_error:
         audio_detail += f"\n错误：{audio.last_error}"
 

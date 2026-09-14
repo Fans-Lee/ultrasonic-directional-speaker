@@ -143,7 +143,7 @@ class UltrasonicApp final {
   uint32_t audioSequenceGapCount_ = 0;
   bool receivedFirstAudioPacket_ = false;
   static constexpr uint32_t kProtocolStatusIntervalMs = 100;
-  uint32_t protocolAudioTimeoutMs_ = 100;
+  uint32_t protocolAudioTimeoutMs_ = 500;
   uint64_t skippedFrameCount_ = 0;
   uint32_t maximumTimerBacklog_ = 0;
 };

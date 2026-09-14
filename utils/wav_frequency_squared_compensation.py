@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""注意：该脚本的平方反比关系是理论分析的结果，在未经过实测前不应当直接使用"""
 """Pre-compensate a PCM WAV for a device whose amplitude response is f squared.
+
+注意：该脚本的平方反比关系是理论分析的结果，在未经过实测前不应当直接使用。
 
 If the device response is
 

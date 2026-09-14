@@ -332,7 +332,7 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         self.assertEqual(window.visual_tabs.count(), 3)
         self.assertEqual(
             [window.visual_tabs.tabText(index) for index in range(3)],
-            ["追踪画面", "相对声场", "实时频谱"],
+            ["追踪画面", "声场模拟", "实时频谱"],
         )
         self.assertIs(window.visual_tabs.currentWidget(), window.video)
 
