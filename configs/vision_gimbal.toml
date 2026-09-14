@@ -115,6 +115,11 @@ channels = 1
 stereo_mix_device = "立体声混音"
 stereo_mix_channels = 2
 process_loopback_helper = ""
+# The helper emits one block every 10 ms, including during genuine silence.
+# Restart it if the PCM pipe stalls, using bounded exponential backoff.
+process_loopback_stall_timeout_ms = 1000
+process_loopback_restart_initial_ms = 250
+process_loopback_restart_max_ms = 5000
 block_ms = 10
 queue_ms = 100
 
@@ -146,7 +151,7 @@ sample_rate = 8000
 packet_ms = 20
 prebuffer_ms = 60
 device_buffer_ms = 256
-data_timeout_ms = 100
+data_timeout_ms = 500
 host_queue_packets = 8
 processing = "loud"
 boost = true

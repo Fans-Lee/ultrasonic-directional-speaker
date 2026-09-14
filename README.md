@@ -98,11 +98,13 @@ uv run python -m vision_gimbal --camera-index 0 --serial-port COM5
 3. 停止追踪时可用 `W/A/S/D` 手动控制；
 4. 串口连接后选择音源，再单击“开始音频链路”。
 
-默认音源是“电脑声音（静音无关回环）”。首次使用时程序会自动调用 `utils/build_wasapi_process_loopback.ps1`，需要 MinGW-w64 `g++` 已在 `PATH` 中。也可提前编译：
+默认音源是“电脑声音（静音无关回环）”。helper 不存在或其源码更新后，程序会自动调用 `utils/build_wasapi_process_loopback.ps1`，需要 MinGW-w64 `g++` 已在 `PATH` 中。也可提前编译：
 
 ```powershell
 .\utils\build_wasapi_process_loopback.ps1
 ```
+
+运行期间若 Windows 音频资源重配、helper 异常退出或 PCM 管道卡住，程序会自动重建回环采集和设备音频流；真实数字静音仍按活动门限关闭阵列 PWM。
 
 不需要 WASAPI 进程回环时，可在 UI 中改选“麦克风”或“立体声混音”。用下列命令查看 PortAudio 设备名称：
 

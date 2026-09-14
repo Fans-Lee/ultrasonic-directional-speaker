@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -71,6 +72,7 @@ class AudioService:
         self._active_source: AudioSourceKind | None = None
         self._source_open = False
         self._device_stream_active = False
+        self._device_stream_started_at: float | None = None
         self._capture_generation = 0
         self._silent_samples = 0
         self._silence_threshold = 10.0 ** (
@@ -86,9 +88,7 @@ class AudioService:
         self._settings = AudioModeSettings(
             processing=AudioProcessingMode(config.stream.processing.lower()),
             drive=(
-                AudioDriveMode.BOOST
-                if config.stream.boost
-                else AudioDriveMode.STANDARD
+                AudioDriveMode.BOOST if config.stream.boost else AudioDriveMode.STANDARD
             ),
             modulation=AudioModulationMode(
                 config.stream.modulation.lower().replace("-", "_")
@@ -178,6 +178,7 @@ class AudioService:
                     self._active_source = source_kind
                     self._source_open = False
                     self._device_stream_active = False
+                    self._device_stream_started_at = None
                     self._silent_samples = 0
             if gate_active:
                 self.device_link.set_mute(True)
@@ -186,6 +187,7 @@ class AudioService:
                 self.device_link.set_mute(False)
                 with self._state_lock:
                     self._device_stream_active = True
+                    self._device_stream_started_at = time.monotonic()
             source.start(
                 lambda block, current_generation=generation: self._capture_callback(
                     current_generation, block
@@ -212,6 +214,7 @@ class AudioService:
                 self._active_source = None
                 self._source_open = False
                 self._device_stream_active = False
+                self._device_stream_started_at = None
                 self._capture_generation += 1
                 self._silent_samples = 0
                 self._pending_pcm.clear()
@@ -234,6 +237,7 @@ class AudioService:
                 self._active_source = None
                 self._source_open = False
                 self._device_stream_active = False
+                self._device_stream_started_at = None
                 self._capture_generation += 1
                 self._silent_samples = 0
                 self._pending_pcm.clear()
@@ -305,6 +309,9 @@ class AudioService:
             settings = self._settings
             last_error = self._last_error
             source = self.sources.get(active_source) if active_source else None
+        reported_source_open = getattr(source, "is_open", None)
+        if reported_source_open is not None:
+            source_open = bool(reported_source_open)
         source_error = getattr(source, "last_error", "")
         if source_error:
             last_error = source_error
@@ -322,20 +329,21 @@ class AudioService:
 
     def status(self) -> AudioStreamTelemetry:
         status = self.device_link.audio_status()
+        with self._state_lock:
+            source = self.sources.get(self._active_source)
+        capture_restart_count = int(getattr(source, "restart_count", 0))
+        capture_block_age_ms = getattr(source, "last_block_age_ms", None)
         return replace(
             status,
             host_capture_overrun_count=self._capture_overrun_count,
+            host_capture_restart_count=capture_restart_count,
+            host_capture_block_age_ms=capture_block_age_ms,
             quantizer_clip_count=self._quantizer_clip_count,
         )
 
-    def _capture_callback(
-        self, generation: int, block: NDArray[np.float32]
-    ) -> None:
+    def _capture_callback(self, generation: int, block: NDArray[np.float32]) -> None:
         with self._state_lock:
-            if (
-                not self._transmitting
-                or generation != self._capture_generation
-            ):
+            if not self._transmitting or generation != self._capture_generation:
                 return
         try:
             self._capture_queue.put_nowait(block)
@@ -359,53 +367,72 @@ class AudioService:
                 continue
             if block.size == 0 and self._stop_event.is_set():
                 break
-            with self._processing_lock:
-                with self._state_lock:
-                    transmitting = self._transmitting
-                if not transmitting:
-                    continue
-                device_status = self.device_link.audio_status()
-                correction_ppm = (
-                    self._clock_sync.update(
-                        device_status.buffer_fill_samples,
-                        device_status.buffer_capacity_samples,
+            try:
+                with self._processing_lock:
+                    with self._state_lock:
+                        transmitting = self._transmitting
+                    if not transmitting:
+                        continue
+                    device_status = self.device_link.audio_status()
+                    correction_ppm = (
+                        self._clock_sync.update(
+                            device_status.buffer_fill_samples,
+                            device_status.buffer_capacity_samples,
+                        )
+                        if device_status.state is StreamState.PLAYING
+                        else 0.0
                     )
-                    if device_status.state is StreamState.PLAYING
-                    else 0.0
-                )
-                if device_status.state is not StreamState.PLAYING:
-                    self._clock_sync.reset()
-                self.preprocessor.set_rate_correction_ppm(correction_ppm)
-                processed = self.preprocessor.process(block)
-                self._quantizer_clip_count += processed.clipped_samples
-                self._recorder.write(processed.post_limiter_samples)
-                if self._apply_activity_gate(processed.post_limiter_samples):
-                    self._packetize(processed.samples)
-                if self.spectrum is not None:
-                    self.spectrum.submit(processed.post_limiter_samples)
+                    if device_status.state is not StreamState.PLAYING:
+                        self._clock_sync.reset()
+                    self.preprocessor.set_rate_correction_ppm(correction_ppm)
+                    processed = self.preprocessor.process(block)
+                    self._quantizer_clip_count += processed.clipped_samples
+                    self._recorder.write(processed.post_limiter_samples)
+                    if self._apply_activity_gate(
+                        processed.post_limiter_samples, device_status
+                    ):
+                        self._packetize(processed.samples)
+                    if self.spectrum is not None:
+                        self.spectrum.submit(processed.post_limiter_samples)
+            except Exception as error:  # noqa: BLE001 - background service boundary
+                self.record_error(error)
 
     def _activity_gate_applies(self, source: AudioSourceKind) -> bool:
         gate = self.config.activity_gate
         return gate.enabled and (
-            not gate.system_loopback_only
-            or source is AudioSourceKind.SYSTEM_LOOPBACK
+            not gate.system_loopback_only or source is AudioSourceKind.SYSTEM_LOOPBACK
         )
 
     def _apply_activity_gate(
-        self, samples: NDArray[np.float32]
+        self,
+        samples: NDArray[np.float32],
+        device_status: AudioStreamTelemetry,
     ) -> bool:
         with self._state_lock:
             source = self._active_source
             device_stream_active = self._device_stream_active
-        if source is None or not self._activity_gate_applies(source):
-            return device_stream_active
+        if source is None:
+            return False
 
+        gate_applies = self._activity_gate_applies(source)
         values = np.asarray(samples, dtype=np.float32)
         rms = (
             float(np.sqrt(np.mean(np.square(values), dtype=np.float64)))
             if values.size
             else 0.0
         )
+        if (
+            device_stream_active
+            and self._device_stream_needs_rearm(device_status)
+            and (not gate_applies or rms >= self._resume_threshold)
+        ):
+            if not self._resume_device_stream():
+                return False
+            device_stream_active = True
+
+        if not gate_applies:
+            return device_stream_active
+
         if device_stream_active:
             if rms <= self._silence_threshold:
                 self._silent_samples += values.size
@@ -432,6 +459,7 @@ class AudioService:
             errors.append(str(error))
         with self._state_lock:
             self._device_stream_active = False
+            self._device_stream_started_at = None
             self._pending_pcm.clear()
             self._sample_index = 0
             self._silent_samples = 0
@@ -448,9 +476,7 @@ class AudioService:
             self._silent_samples = 0
             self._clock_sync.reset()
         try:
-            self.device_link.start_audio_stream(
-                self._stream_parameters(settings)
-            )
+            self.device_link.start_audio_stream(self._stream_parameters(settings))
             self.device_link.set_mute(False)
         except Exception as error:  # noqa: BLE001 - device safety boundary
             try:
@@ -458,12 +484,32 @@ class AudioService:
                 self.device_link.stop_audio_stream()
             except Exception:
                 pass
+            with self._state_lock:
+                self._device_stream_active = False
+                self._device_stream_started_at = None
             self.record_error(error)
             return False
         with self._state_lock:
             self._device_stream_active = True
+            self._device_stream_started_at = time.monotonic()
             self._last_error = ""
         return True
+
+    def _device_stream_needs_rearm(self, status: AudioStreamTelemetry) -> bool:
+        if status.status_age_ms is None or status.status_age_ms > 1000:
+            return False
+        if status.state not in {
+            StreamState.IDLE,
+            StreamState.MUTED,
+            StreamState.FAULT,
+        }:
+            return False
+        with self._state_lock:
+            started_at = self._device_stream_started_at
+        if started_at is None:
+            return False
+        grace_s = max(0.5, self.config.stream.data_timeout_ms * 2.0 / 1000.0)
+        return time.monotonic() - started_at >= grace_s
 
     def _stream_parameters(self, settings: AudioModeSettings) -> StreamStart:
         return StreamStart(

@@ -77,6 +77,8 @@ class AudioStreamTelemetry:
     timer_skipped_samples: int = 0
     last_audio_age_ms: int = 0
     host_capture_overrun_count: int = 0
+    host_capture_restart_count: int = 0
+    host_capture_block_age_ms: int | None = None
     host_tx_overrun_count: int = 0
     quantizer_clip_count: int = 0
     host_rx_error_count: int = 0

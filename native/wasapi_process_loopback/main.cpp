@@ -196,13 +196,27 @@ int capture(DWORD processId, ProcessLoopbackMode mode) {
   format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
   const DWORD flags = AUDCLNT_STREAMFLAGS_LOOPBACK |
+                      AUDCLNT_STREAMFLAGS_EVENTCALLBACK |
                       AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
                       AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
-  result = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, 1000000, 0,
+  result = audioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, 0, 0,
                                    &format, nullptr);
   if (FAILED(result)) {
     printError("IAudioClient::Initialize", result);
     return 4;
+  }
+
+  HANDLE sampleReadyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+  if (sampleReadyEvent == nullptr) {
+    printError("CreateEventW", HRESULT_FROM_WIN32(GetLastError()));
+    return 5;
+  }
+
+  result = audioClient->SetEventHandle(sampleReadyEvent);
+  if (FAILED(result)) {
+    printError("IAudioClient::SetEventHandle", result);
+    CloseHandle(sampleReadyEvent);
+    return 6;
   }
 
   IAudioCaptureClient* captureClient = nullptr;
@@ -210,12 +224,14 @@ int capture(DWORD processId, ProcessLoopbackMode mode) {
       IID_IAudioCaptureClient, reinterpret_cast<void**>(&captureClient));
   if (FAILED(result)) {
     printError("IAudioClient::GetService", result);
+    CloseHandle(sampleReadyEvent);
     return 7;
   }
 
   result = audioClient->Start();
   if (FAILED(result)) {
     printError("IAudioClient::Start", result);
+    CloseHandle(sampleReadyEvent);
     return 8;
   }
 
@@ -223,6 +239,7 @@ int capture(DWORD processId, ProcessLoopbackMode mode) {
                                kChannels, kSampleFormatFloat32};
   if (!writeAll(&header, sizeof(header))) {
     audioClient->Stop();
+    CloseHandle(sampleReadyEvent);
     return 9;
   }
 
@@ -233,48 +250,53 @@ int capture(DWORD processId, ProcessLoopbackMode mode) {
       std::chrono::steady_clock::now() + std::chrono::milliseconds(10);
   bool running = true;
   while (running) {
-    Sleep(1);
+    const DWORD waitResult = WaitForSingleObject(sampleReadyEvent, 1);
+    if (waitResult == WAIT_FAILED) {
+      printError("WaitForSingleObject", HRESULT_FROM_WIN32(GetLastError()));
+      running = false;
+      break;
+    }
 
     UINT32 frames = 0;
-    while (running) {
+    if (waitResult == WAIT_OBJECT_0) {
       result = captureClient->GetNextPacketSize(&frames);
       if (FAILED(result)) {
         printError("IAudioCaptureClient::GetNextPacketSize", result);
         running = false;
-        break;
       }
-      if (frames == 0) break;
-
-      BYTE* data = nullptr;
-      DWORD captureFlags = 0;
-      UINT64 devicePosition = 0;
-      UINT64 qpcPosition = 0;
-      result = captureClient->GetBuffer(&data, &frames, &captureFlags,
-                                        &devicePosition, &qpcPosition);
-      if (FAILED(result)) {
-        running = false;
-        break;
-      }
-
-      const size_t sampleCount = static_cast<size_t>(frames) * kChannels;
-      if ((captureFlags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY) != 0) {
-        pending.clear();
-        pendingOffset = 0;
-      }
-      if ((captureFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0) {
-        pending.insert(pending.end(), sampleCount, 0.0f);
-      } else {
-        const auto* input = reinterpret_cast<const int16_t*>(data);
-        pending.reserve(pending.size() + sampleCount);
-        for (size_t index = 0; index < sampleCount; ++index) {
-          pending.push_back(static_cast<float>(input[index]) / 32768.0f);
+      if (running && frames > 0) {
+        BYTE* data = nullptr;
+        DWORD captureFlags = 0;
+        UINT64 devicePosition = 0;
+        UINT64 qpcPosition = 0;
+        result = captureClient->GetBuffer(&data, &frames, &captureFlags,
+                                          &devicePosition, &qpcPosition);
+        if (FAILED(result)) {
+          printError("IAudioCaptureClient::GetBuffer", result);
+          running = false;
         }
-      }
-      result = captureClient->ReleaseBuffer(frames);
-      if (FAILED(result)) {
-        printError("IAudioCaptureClient::ReleaseBuffer", result);
-        running = false;
-        break;
+
+        if (running) {
+          const size_t sampleCount = static_cast<size_t>(frames) * kChannels;
+          if ((captureFlags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY) != 0) {
+            pending.clear();
+            pendingOffset = 0;
+          }
+          if ((captureFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0) {
+            pending.insert(pending.end(), sampleCount, 0.0f);
+          } else {
+            const auto* input = reinterpret_cast<const int16_t*>(data);
+            pending.reserve(pending.size() + sampleCount);
+            for (size_t index = 0; index < sampleCount; ++index) {
+              pending.push_back(static_cast<float>(input[index]) / 32768.0f);
+            }
+          }
+          result = captureClient->ReleaseBuffer(frames);
+          if (FAILED(result)) {
+            printError("IAudioCaptureClient::ReleaseBuffer", result);
+            running = false;
+          }
+        }
       }
     }
 
@@ -312,6 +334,7 @@ int capture(DWORD processId, ProcessLoopbackMode mode) {
   }
 
   audioClient->Stop();
+  CloseHandle(sampleReadyEvent);
   return running ? 0 : 10;
 }
 
