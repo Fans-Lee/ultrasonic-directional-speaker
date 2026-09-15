@@ -149,7 +149,9 @@ release_ms = 1000
 [audio.stream]
 sample_rate = 8000
 packet_ms = 20
-prebuffer_ms = 60
+# Keep enough decoded PCM on the ESP32 to absorb ordinary Windows/Python/USB
+# scheduling stalls without approaching the 2048-sample device capacity.
+prebuffer_ms = 120
 device_buffer_ms = 256
 data_timeout_ms = 500
 host_queue_packets = 8
@@ -174,7 +176,7 @@ queue_blocks = 4
 [spatial_field]
 # An optional, display-only analysis path. It never changes tracking, audio,
 # serial traffic, or the gimbal command stream.
-enabled = true
+enabled = false
 interval_s = 0.5
 result_ttl_s = 2.0
 max_consecutive_overruns = 3

@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--processing", choices=("raw", "loud"), default="raw")
     parser.add_argument("--drive", choices=("standard", "boost"), default="standard")
     parser.add_argument("--modulation", choices=("dsb", "sram"), default="dsb")
-    parser.add_argument("--prebuffer-ms", type=int, default=60)
+    parser.add_argument("--prebuffer-ms", type=int, default=120)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--log-jsonl", type=Path)
     parser.add_argument("--inspect-only", action="store_true", help="validate source and print hash without opening serial")
