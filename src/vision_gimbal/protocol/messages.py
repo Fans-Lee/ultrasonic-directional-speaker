@@ -74,7 +74,7 @@ STATUS = struct.Struct("<BBHHHIIIIIHH")
 class StreamStart:
     sample_rate: int = 8000
     packet_samples: int = 160
-    prebuffer_samples: int = 480
+    prebuffer_samples: int = 960
     sample_format: AudioSampleFormat = AudioSampleFormat.PCM_U8
     channels: int = 1
     modulation: AudioModulation = AudioModulation.DSB_AM

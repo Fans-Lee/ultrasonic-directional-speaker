@@ -83,6 +83,7 @@ class FrameCodecTests(unittest.TestCase):
         parameters = StreamStart()
         self.assertEqual(len(parameters.pack()), 16)
         self.assertEqual(StreamStart.unpack(parameters.pack()), parameters)
+        self.assertEqual(parameters.prebuffer_samples, 960)
 
     def test_gimbal_uses_signed_centidegrees(self):
         self.assertEqual(pack_gimbal_setpoint(-10.25, 30.0), b"\xff\xfb\xb8\x0b")

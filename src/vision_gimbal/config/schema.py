@@ -350,7 +350,7 @@ class AudioActivityGateConfig:
 class AudioStreamConfig:
     sample_rate: int = 8000
     packet_ms: int = 20
-    prebuffer_ms: int = 60
+    prebuffer_ms: int = 120
     device_buffer_ms: int = 256
     data_timeout_ms: int = 500
     host_queue_packets: int = 8

@@ -17,6 +17,16 @@ class ProjectSetupTests(unittest.TestCase):
 
         self.assertFalse(config.spatial_field.enabled)
 
+    def test_default_audio_prebuffer_absorbs_short_host_stalls(self):
+        config = load_config(PROJECT_ROOT / "configs" / "vision_gimbal.toml")
+
+        self.assertEqual(config.audio.stream.prebuffer_ms, 120)
+        self.assertEqual(config.audio.stream.prebuffer_samples, 960)
+        self.assertLess(
+            config.audio.stream.prebuffer_ms,
+            config.audio.stream.device_buffer_ms,
+        )
+
     def test_frequency_compensation_cli_can_show_help(self):
         result = subprocess.run(
             [
