@@ -1,0 +1,4 @@
+$env:PYTHONPATH = ".\src"
+uv run python -m vision_gimbal --camera-index 1 --serial-port COM5
+
+UGREEN:靠近\一侧为5 靠近backspace一侧为4

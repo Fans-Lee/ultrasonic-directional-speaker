@@ -4,6 +4,8 @@
 *.pyc
 **/__pycache__/
 .venv/
+.codex-ppt-work/
+.codex-finalizer/
 work/
 build/
 ppt_build_kaoti/
