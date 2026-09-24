@@ -1,6 +1,15 @@
 """Person detection, tracking, and trajectory smoothing."""
 
-from .pipeline import VisionPipeline
-from .yolo_bytetrack import YOLOByteTrackPeopleTracker
-
 __all__ = ["VisionPipeline", "YOLOByteTrackPeopleTracker"]
+
+
+def __getattr__(name):
+    if name == "VisionPipeline":
+        from .pipeline import VisionPipeline
+
+        return VisionPipeline
+    if name == "YOLOByteTrackPeopleTracker":
+        from .yolo_bytetrack import YOLOByteTrackPeopleTracker
+
+        return YOLOByteTrackPeopleTracker
+    raise AttributeError(name)

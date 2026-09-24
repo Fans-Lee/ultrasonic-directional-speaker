@@ -58,6 +58,39 @@ class CameraConfig:
 
 
 @dataclass(frozen=True)
+class AppearanceConfig:
+    enabled: bool = True
+    sample_interval_s: float = 1.0
+    gallery_ttl_s: float = 120.0
+    min_confidence: float = 0.35
+    min_box_width_px: int = 32
+    min_box_height_px: int = 64
+    match_similarity: float = 0.88
+    match_margin: float = 0.06
+    match_confirmations: int = 2
+    max_initial_samples: int = 4
+    update_similarity: float = 0.75
+    max_samples_per_person: int = 8
+
+    def __post_init__(self) -> None:
+        if self.sample_interval_s <= 0 or self.gallery_ttl_s <= 0:
+            raise ValueError("appearance intervals must be positive")
+        if self.min_box_width_px <= 0 or self.min_box_height_px <= 0:
+            raise ValueError("appearance minimum box dimensions must be positive")
+        if self.max_samples_per_person <= 0:
+            raise ValueError("appearance.max_samples_per_person must be positive")
+        if self.match_confirmations <= 0:
+            raise ValueError("appearance.match_confirmations must be positive")
+        if self.max_initial_samples < self.match_confirmations:
+            raise ValueError("appearance.max_initial_samples must cover confirmations")
+        for name in (
+            "min_confidence", "match_similarity", "match_margin", "update_similarity"
+        ):
+            if not 0.0 <= getattr(self, name) <= 1.0:
+                raise ValueError(f"appearance.{name} must be in [0, 1]")
+
+
+@dataclass(frozen=True)
 class VisionConfig:
     model_path: str = "yolo26s.pt"
     tracker_config_path: str = "configs/bytetrack_person.yaml"
@@ -70,6 +103,7 @@ class VisionConfig:
     prediction_duplicate_containment_threshold: float = 0.85
     max_prediction_frames: int = 12
     device: str = "auto"
+    appearance: AppearanceConfig = field(default_factory=AppearanceConfig)
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:

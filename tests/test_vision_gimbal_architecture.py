@@ -2,6 +2,7 @@
 
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
@@ -82,6 +83,7 @@ def _person(track_id, center, observed=True, confidence=0.9):
         aim_point=center,
         confidence=confidence,
         observed=observed,
+        person_id=track_id,
     )
 
 
@@ -121,6 +123,15 @@ def _control_service():
 
 
 class TrackingSessionTests(unittest.TestCase):
+    def test_unconfirmed_identity_cannot_start_tracking(self):
+        session = TrackingSession(AppConfig().target)
+        waiting = replace(_person(7, (50.0, 50.0)), person_id=None)
+        snapshot = _snapshot(1, 0.0, [waiting])
+        session.handle(SelectTarget(7, 1), snapshot)
+        session.handle(StartTracking(), snapshot)
+        self.assertIsNone(session.state.selected_target_id)
+        self.assertEqual(session.state.control_mode, ControlMode.STOPPED_MANUAL)
+
     def test_start_requires_an_explicit_visible_selection(self):
         config = AppConfig()
         session = TrackingSession(config.target)
@@ -154,6 +165,29 @@ class TrackingSessionTests(unittest.TestCase):
 
 
 class ControlServiceTests(unittest.TestCase):
+    def test_reidentified_person_can_be_reselected_after_auto_release(self):
+        service, store, _, _ = _control_service()
+        first = replace(_person(10, (25.0, 50.0)), person_id=7)
+        store.set(_snapshot(1, 0.0, [first]))
+        service.submit(SelectTarget(10, 1))
+        service.submit(StartTracking())
+        started = service.tick(0.0)
+        self.assertEqual(started.active_target_id, 7)
+
+        store.set(_snapshot(2, 0.1, []))
+        released = service.tick(1.0)
+        self.assertEqual(released.control_mode, ControlMode.STOPPED_MANUAL)
+        self.assertEqual(released.selected_target_id, 7)
+
+        returned = replace(_person(27, (75.0, 50.0)), person_id=7)
+        store.set(_snapshot(3, 1.1, [returned]))
+        self.assertTrue(service.tick(1.1).selected_target_available)
+        service.submit(StartTracking())
+        resumed = service.tick(1.2)
+        self.assertEqual(resumed.control_mode, ControlMode.AUTO_TRACKING)
+        self.assertEqual(resumed.active_target_id, 7)
+        service.close()
+
     def test_lost_target_stops_instead_of_switching_people(self):
         service, store, _, _ = _control_service()
         store.set(
