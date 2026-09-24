@@ -1,0 +1,362 @@
+{
+  "input_dir": "C:\\Users\\16591\\Desktop\\summer\\ultrasonic-directional-speaker\\ultrasonic-directional-speaker\\data\\600Hzto1800Hz",
+  "recordings": [
+    {
+      "file": "data\\600Hzto1800Hz\\1000Hz.wav",
+      "label_hz": 1000.0,
+      "detected_hz": 1000.0,
+      "label_error_hz": 0.0,
+      "channel_index_zero_based": 1,
+      "sample_rate_hz": 48000,
+      "duration_s": 9.387,
+      "analyzed_windows": 17,
+      "fundamental_median_dbfs": -11.0,
+      "channel_peak": 0.585724,
+      "channel_samples_near_full_scale_percent": 0.0,
+      "harmonics": {
+        "2": {
+          "median_dbc": -12.93,
+          "spread_mad_db": 0.33,
+          "frequency_hz": 2000.0,
+          "inside_project_audio_band": true
+        },
+        "3": {
+          "median_dbc": -23.33,
+          "spread_mad_db": 2.8,
+          "frequency_hz": 3000.0,
+          "inside_project_audio_band": true
+        },
+        "4": {
+          "median_dbc": -32.57,
+          "spread_mad_db": 3.99,
+          "frequency_hz": 4000.0,
+          "inside_project_audio_band": false
+        }
+      }
+    },
+    {
+      "file": "data\\600Hzto1800Hz\\1400Hz.wav",
+      "label_hz": 1400.0,
+      "detected_hz": 1400.0,
+      "label_error_hz": 0.0,
+      "channel_index_zero_based": 1,
+      "sample_rate_hz": 48000,
+      "duration_s": 12.693,
+      "analyzed_windows": 24,
+      "fundamental_median_dbfs": -7.25,
+      "channel_peak": 0.791656,
+      "channel_samples_near_full_scale_percent": 0.0,
+      "harmonics": {
+        "2": {
+          "median_dbc": -14.4,
+          "spread_mad_db": 0.82,
+          "frequency_hz": 2800.0,
+          "inside_project_audio_band": true
+        },
+        "3": {
+          "median_dbc": -27.63,
+          "spread_mad_db": 1.66,
+          "frequency_hz": 4200.0,
+          "inside_project_audio_band": false
+        },
+        "4": {
+          "median_dbc": -32.98,
+          "spread_mad_db": 0.45,
+          "frequency_hz": 5600.0,
+          "inside_project_audio_band": false
+        }
+      }
+    },
+    {
+      "file": "data\\600Hzto1800Hz\\1800Hz.wav",
+      "label_hz": 1800.0,
+      "detected_hz": 1798.0,
+      "label_error_hz": -2.0,
+      "channel_index_zero_based": 1,
+      "sample_rate_hz": 48000,
+      "duration_s": 9.28,
+      "analyzed_windows": 17,
+      "fundamental_median_dbfs": -14.33,
+      "channel_peak": 0.690826,
+      "channel_samples_near_full_scale_percent": 0.0,
+      "harmonics": {
+        "2": {
+          "median_dbc": -6.98,
+          "spread_mad_db": 0.63,
+          "frequency_hz": 3596.0,
+          "inside_project_audio_band": false
+        },
+        "3": {
+          "median_dbc": -23.44,
+          "spread_mad_db": 0.73,
+          "frequency_hz": 5394.0,
+          "inside_project_audio_band": false
+        },
+        "4": {
+          "median_dbc": -38.5,
+          "spread_mad_db": 0.86,
+          "frequency_hz": 7192.0,
+          "inside_project_audio_band": false
+        }
+      }
+    },
+    {
+      "file": "data\\600Hzto1800Hz\\600Hz.wav",
+      "label_hz": 600.0,
+      "detected_hz": 500.0,
+      "label_error_hz": -100.0,
+      "channel_index_zero_based": 1,
+      "sample_rate_hz": 48000,
+      "duration_s": 9.813,
+      "analyzed_windows": 15,
+      "fundamental_median_dbfs": -13.8,
+      "channel_peak": 0.557129,
+      "channel_samples_near_full_scale_percent": 0.0,
+      "harmonics": {
+        "2": {
+          "median_dbc": -10.04,
+          "spread_mad_db": 1.25,
+          "frequency_hz": 1000.0,
+          "inside_project_audio_band": true
+        },
+        "3": {
+          "median_dbc": -19.9,
+          "spread_mad_db": 2.67,
+          "frequency_hz": 1500.0,
+          "inside_project_audio_band": true
+        },
+        "4": {
+          "median_dbc": -25.46,
+          "spread_mad_db": 4.14,
+          "frequency_hz": 2000.0,
+          "inside_project_audio_band": true
+        }
+      }
+    },
+    {
+      "file": "data\\600Hzto1800Hz\\800Hz.wav",
+      "label_hz": 800.0,
+      "detected_hz": 800.0,
+      "label_error_hz": 0.0,
+      "channel_index_zero_based": 1,
+      "sample_rate_hz": 48000,
+      "duration_s": 9.643,
+      "analyzed_windows": 18,
+      "fundamental_median_dbfs": -24.09,
+      "channel_peak": 0.219025,
+      "channel_samples_near_full_scale_percent": 0.0,
+      "harmonics": {
+        "2": {
+          "median_dbc": -14.51,
+          "spread_mad_db": 0.75,
+          "frequency_hz": 1600.0,
+          "inside_project_audio_band": true
+        },
+        "3": {
+          "median_dbc": -36.59,
+          "spread_mad_db": 1.42,
+          "frequency_hz": 2400.0,
+          "inside_project_audio_band": true
+        },
+        "4": {
+          "median_dbc": -53.19,
+          "spread_mad_db": 1.8,
+          "frequency_hz": 3200.0,
+          "inside_project_audio_band": false
+        }
+      }
+    }
+  ],
+  "warnings": [
+    "600Hz.wav: filename says 600 Hz but measured 500 Hz"
+  ],
+  "fitted_profile": {
+    "model_type": "piecewise_linear_harmonic_ratio_vs_detected_frequency",
+    "meaning": "phone/room recording profile only; no calibrated PCM input or physical acoustic reference",
+    "valid_frequency_range_hz": [
+      500.0,
+      1798.0
+    ],
+    "curves": {
+      "2": [
+        {
+          "frequency_hz": 500.0,
+          "relative_db": -10.04
+        },
+        {
+          "frequency_hz": 800.0,
+          "relative_db": -14.51
+        },
+        {
+          "frequency_hz": 1000.0,
+          "relative_db": -12.93
+        },
+        {
+          "frequency_hz": 1400.0,
+          "relative_db": -14.4
+        },
+        {
+          "frequency_hz": 1798.0,
+          "relative_db": -6.98
+        }
+      ],
+      "3": [
+        {
+          "frequency_hz": 500.0,
+          "relative_db": -19.9
+        },
+        {
+          "frequency_hz": 800.0,
+          "relative_db": -36.59
+        },
+        {
+          "frequency_hz": 1000.0,
+          "relative_db": -23.33
+        },
+        {
+          "frequency_hz": 1400.0,
+          "relative_db": -27.63
+        },
+        {
+          "frequency_hz": 1798.0,
+          "relative_db": -23.44
+        }
+      ],
+      "4": [
+        {
+          "frequency_hz": 500.0,
+          "relative_db": -25.46
+        },
+        {
+          "frequency_hz": 800.0,
+          "relative_db": -53.19
+        },
+        {
+          "frequency_hz": 1000.0,
+          "relative_db": -32.57
+        },
+        {
+          "frequency_hz": 1400.0,
+          "relative_db": -32.98
+        },
+        {
+          "frequency_hz": 1798.0,
+          "relative_db": -38.5
+        }
+      ]
+    },
+    "leave_one_recording_out": [
+      {
+        "harmonic": 2,
+        "held_out_hz": 500.0,
+        "observed_dbc": -10.04,
+        "predicted_dbc": -14.51,
+        "error_db": -4.47
+      },
+      {
+        "harmonic": 2,
+        "held_out_hz": 800.0,
+        "observed_dbc": -14.51,
+        "predicted_dbc": -11.77,
+        "error_db": 2.74
+      },
+      {
+        "harmonic": 2,
+        "held_out_hz": 1000.0,
+        "observed_dbc": -12.93,
+        "predicted_dbc": -14.47,
+        "error_db": -1.54
+      },
+      {
+        "harmonic": 2,
+        "held_out_hz": 1400.0,
+        "observed_dbc": -14.4,
+        "predicted_dbc": -9.95,
+        "error_db": 4.45
+      },
+      {
+        "harmonic": 2,
+        "held_out_hz": 1798.0,
+        "observed_dbc": -6.98,
+        "predicted_dbc": -14.4,
+        "error_db": -7.42
+      },
+      {
+        "harmonic": 3,
+        "held_out_hz": 500.0,
+        "observed_dbc": -19.9,
+        "predicted_dbc": -36.59,
+        "error_db": -16.69
+      },
+      {
+        "harmonic": 3,
+        "held_out_hz": 800.0,
+        "observed_dbc": -36.59,
+        "predicted_dbc": -21.96,
+        "error_db": 14.63
+      },
+      {
+        "harmonic": 3,
+        "held_out_hz": 1000.0,
+        "observed_dbc": -23.33,
+        "predicted_dbc": -33.6,
+        "error_db": -10.27
+      },
+      {
+        "harmonic": 3,
+        "held_out_hz": 1400.0,
+        "observed_dbc": -27.63,
+        "predicted_dbc": -23.39,
+        "error_db": 4.24
+      },
+      {
+        "harmonic": 3,
+        "held_out_hz": 1798.0,
+        "observed_dbc": -23.44,
+        "predicted_dbc": -27.63,
+        "error_db": -4.19
+      },
+      {
+        "harmonic": 4,
+        "held_out_hz": 500.0,
+        "observed_dbc": -25.46,
+        "predicted_dbc": -53.19,
+        "error_db": -27.73
+      },
+      {
+        "harmonic": 4,
+        "held_out_hz": 800.0,
+        "observed_dbc": -53.19,
+        "predicted_dbc": -29.73,
+        "error_db": 23.46
+      },
+      {
+        "harmonic": 4,
+        "held_out_hz": 1000.0,
+        "observed_dbc": -32.57,
+        "predicted_dbc": -46.45,
+        "error_db": -13.88
+      },
+      {
+        "harmonic": 4,
+        "held_out_hz": 1400.0,
+        "observed_dbc": -32.98,
+        "predicted_dbc": -35.54,
+        "error_db": -2.56
+      },
+      {
+        "harmonic": 4,
+        "held_out_hz": 1798.0,
+        "observed_dbc": -38.5,
+        "predicted_dbc": -32.98,
+        "error_db": 5.52
+      }
+    ],
+    "median_absolute_validation_error_db": 5.52,
+    "median_absolute_validation_error_db_by_harmonic": {
+      "2": 4.45,
+      "3": 10.27,
+      "4": 13.88
+    }
+  }
+}
