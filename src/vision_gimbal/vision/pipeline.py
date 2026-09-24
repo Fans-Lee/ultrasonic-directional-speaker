@@ -4,6 +4,7 @@ from typing import Any
 
 from ..domain.tracking import VisionSnapshot
 from ..ports.people_tracker import PeopleTracker
+from .appearance import IdentityGallery
 from .kalman_smoother import PerTrackKalmanSmoother
 
 
@@ -12,9 +13,11 @@ class VisionPipeline:
         self,
         tracker: PeopleTracker,
         smoother: PerTrackKalmanSmoother,
+        identities: IdentityGallery | None = None,
     ) -> None:
         self.tracker = tracker
         self.smoother = smoother
+        self.identities = identities
         self._last_timestamp = None
 
     def process(
@@ -30,6 +33,8 @@ class VisionPipeline:
         self._last_timestamp = captured_at
         observed = self.tracker.update(frame)
         tracks = tuple(self.smoother.update(observed, dt_s))
+        if self.identities is not None:
+            tracks = self.identities.update(frame, tracks, captured_at)
         return VisionSnapshot(
             frame_id=frame_id,
             captured_at=captured_at,
@@ -41,3 +46,5 @@ class VisionPipeline:
         self._last_timestamp = None
         self.tracker.reset()
         self.smoother.reset()
+        if self.identities is not None:
+            self.identities.reset()

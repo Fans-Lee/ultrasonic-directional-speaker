@@ -13,6 +13,7 @@ class TrackedPerson:
     aim_point: Point
     confidence: float
     observed: bool = True
+    person_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -36,4 +37,13 @@ class VisionSnapshot:
         return next(
             (track for track in self.tracks if track.track_id == track_id),
             None,
+        )
+
+    def find_person(self, person_id: int):
+        observed = next(
+            (track for track in self.tracks if track.person_id == person_id and track.observed),
+            None,
+        )
+        return observed or next(
+            (track for track in self.tracks if track.person_id == person_id), None
         )

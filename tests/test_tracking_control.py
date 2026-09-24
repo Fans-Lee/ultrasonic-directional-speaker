@@ -60,6 +60,7 @@ class TargetLockTests(unittest.TestCase):
             (50.0, 50.0),
             (50.0, 50.0),
             0.9,
+            person_id=3,
         )
         observed = VisionSnapshot(1, 2.0, (100, 100), (person,))
         missing = VisionSnapshot(2, 2.3, (100, 100), ())
@@ -74,7 +75,7 @@ class TargetLockTests(unittest.TestCase):
         self.assertEqual(interim.status, TargetStatus.LOST)
         self.assertFalse(interim.released)
         self.assertTrue(expired.released)
-        self.assertEqual(target_lock.track_id, 3)
+        self.assertEqual(target_lock.person_id, 3)
 
 
 class CameraProjectionTests(unittest.TestCase):

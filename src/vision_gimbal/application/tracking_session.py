@@ -77,15 +77,18 @@ class TrackingSession:
         if person is None or not person.observed:
             self.state.last_message = "该目标已离开画面，请重新选择"
             return SessionActions()
+        if person.person_id is None:
+            self.state.last_message = "正在确认人物身份，请稍后重新选择"
+            return SessionActions()
 
-        self.state.selected_target_id = person.track_id
-        if self.state.active_target_id == person.track_id:
-            self.state.last_message = f"正在追踪 ID {person.track_id}"
+        self.state.selected_target_id = person.person_id
+        if self.state.active_target_id == person.person_id:
+            self.state.last_message = f"正在追踪 ID {person.person_id}"
         elif self.state.control_mode is ControlMode.AUTO_TRACKING:
-            self.state.last_message = f"已选择 ID {person.track_id}，点击“切换目标”生效"
+            self.state.last_message = f"已选择 ID {person.person_id}，点击“切换目标”生效"
         else:
             self.state.target_status = TargetStatus.READY
-            self.state.last_message = f"已选择 ID {person.track_id}，点击“开始追踪”"
+            self.state.last_message = f"已选择 ID {person.person_id}，点击“开始追踪”"
         return SessionActions()
 
     def _start_tracking(
@@ -96,7 +99,7 @@ class TrackingSession:
         if selected is None:
             self.state.last_message = "请先点击画面中的人物"
             return SessionActions()
-        person = snapshot.find(selected) if snapshot is not None else None
+        person = snapshot.find_person(selected) if snapshot is not None else None
         if (
             person is None
             or not person.observed

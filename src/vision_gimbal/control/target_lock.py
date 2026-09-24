@@ -1,4 +1,4 @@
-"""Resolve only the target explicitly activated by the operator."""
+"""Resolve the operator-selected person across short tracker-ID changes."""
 
 from dataclasses import dataclass
 
@@ -17,20 +17,20 @@ class TargetResolution:
 class TargetLock:
     def __init__(self, config: TargetLockConfig) -> None:
         self.config = config
-        self._track_id = None
+        self._person_id = None
         self._last_observed_at = None
 
     @property
-    def track_id(self):
-        return self._track_id
+    def person_id(self):
+        return self._person_id
 
-    def lock(self, track_id: int) -> None:
-        if self._track_id != int(track_id):
-            self._track_id = int(track_id)
+    def lock(self, person_id: int) -> None:
+        if self._person_id != int(person_id):
+            self._person_id = int(person_id)
             self._last_observed_at = None
 
     def clear(self) -> None:
-        self._track_id = None
+        self._person_id = None
         self._last_observed_at = None
 
     def resolve(
@@ -38,10 +38,17 @@ class TargetLock:
         snapshot: VisionSnapshot | None,
         timestamp_s: float,
     ) -> TargetResolution:
-        if self._track_id is None:
+        if self._person_id is None:
             return TargetResolution(TargetStatus.NONE)
 
-        person = snapshot.find(self._track_id) if snapshot is not None else None
+        # A fresh identity match cannot revive an already expired automatic lock.
+        if (
+            self._last_observed_at is not None
+            and timestamp_s - self._last_observed_at > self.config.release_timeout_s
+        ):
+            return TargetResolution(TargetStatus.LOST, released=True)
+
+        person = snapshot.find_person(self._person_id) if snapshot is not None else None
         usable = person is not None and person.confidence >= self.config.min_confidence
         if usable and person.observed:
             observed_at = snapshot.captured_at

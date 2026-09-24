@@ -82,16 +82,16 @@ def render_overlay(
     active_id = state.active_target_id if state is not None else None
     for person in vision.tracks:
         x1, y1, x2, y2 = (round(value) for value in person.bbox_xyxy)
-        if person.track_id == active_id:
+        if person.person_id is not None and person.person_id == active_id:
             color = (0, 255, 255)
             suffix = " TRACKING"
             thickness = 3
-        elif person.track_id == selected_id:
+        elif person.person_id is not None and person.person_id == selected_id:
             color = (255, 120, 0)
             suffix = " SELECTED"
             thickness = 3
         else:
-            color = _COLORS[person.track_id % len(_COLORS)]
+            color = _COLORS[(person.person_id or person.track_id) % len(_COLORS)]
             suffix = ""
             thickness = 2
         if person.observed:
@@ -101,7 +101,7 @@ def render_overlay(
             suffix += " PREDICTED"
         cv2.putText(
             annotated,
-            f"ID {person.track_id}{suffix}",
+            f"ID {person.person_id if person.person_id is not None else '?'}{suffix}",
             (max(0, x1), max(20, y1 - 8)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.58,

@@ -1,0 +1,52 @@
+{
+  "sample_rate_hz": 48000,
+  "channels": 1,
+  "duration_s": 20.373333333333335,
+  "passed_band_hz": [
+    250.0,
+    3000.0
+  ],
+  "rms_dbfs": {
+    "original": -14.26475816401169,
+    "filtered": -15.282737336891438
+  },
+  "peak_dbfs": {
+    "original": -0.01645005096755103,
+    "filtered": -2.0840380039354964
+  },
+  "per_channel_peak_dbfs": {
+    "original": [
+      -0.01645005096755103
+    ],
+    "filtered": [
+      -2.0840380039354964
+    ]
+  },
+  "per_channel_rms_dbfs": {
+    "original": [
+      -14.26475816401169
+    ],
+    "filtered": [
+      -15.282737336891438
+    ]
+  },
+  "band_rms_dbfs": {
+    "250-3000Hz": {
+      "original": -15.125279826847782,
+      "filtered": -15.282737336891593
+    },
+    "8000-17000Hz": {
+      "original": -35.03899313636147,
+      "filtered": -153.54496018533473
+    }
+  },
+  "input": "C:\\Users\\16591\\Desktop\\summer\\ultrasonic-directional-speaker\\ultrasonic-directional-speaker\\data\\nevergonnagiveyouup\\20260921_220048.wav",
+  "output": "C:\\Users\\16591\\Desktop\\summer\\ultrasonic-directional-speaker\\ultrasonic-directional-speaker\\output\\audio_calibration\\phone_right_250_3000.wav",
+  "input_bits": 16,
+  "output_bits": 24,
+  "input_channels": 2,
+  "channel_selection": "right",
+  "transition_hz": 50.0,
+  "edge_fade_ms": 10.0,
+  "gain_db": 0.0
+}

@@ -135,7 +135,7 @@ class ControlService:
             else None
         )
         selected_person = (
-            vision.find(state.selected_target_id)
+            vision.find_person(state.selected_target_id)
             if vision is not None and state.selected_target_id is not None
             else None
         )

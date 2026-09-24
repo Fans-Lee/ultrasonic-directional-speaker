@@ -29,6 +29,7 @@ from .infrastructure.wasapi_process_loopback import WasapiProcessLoopbackSource
 from .ui.main_window import MainWindow
 from .ui.qt_workers import QtApplicationRuntime
 from .vision.kalman_smoother import PerTrackKalmanSmoother
+from .vision.appearance import IdentityGallery
 from .vision.pipeline import VisionPipeline
 from .vision.yolo_bytetrack import YOLOByteTrackPeopleTracker
 from .spatial.field import RelativeFreeFieldModel
@@ -48,7 +49,7 @@ def build_application(config: AppConfig) -> ApplicationBundle:
     camera = OpenCVCamera(config.camera)
     tracker = YOLOByteTrackPeopleTracker(config.vision)
     smoother = PerTrackKalmanSmoother(config.vision)
-    pipeline = VisionPipeline(tracker, smoother)
+    pipeline = VisionPipeline(tracker, smoother, IdentityGallery(config.vision.appearance))
     spatial = SpatialFieldService(
         config.spatial_field,
         UltralyticsDepthEstimator(config.spatial_field.depth),

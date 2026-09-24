@@ -28,7 +28,22 @@ duplicate_containment_threshold = 0.90
 prediction_duplicate_iou_threshold = 0.55
 prediction_duplicate_containment_threshold = 0.85
 max_prediction_frames = 12
-device = "auto"
+device = "cpu"
+
+[vision.appearance]
+# Session-local clothing appearance; no downloaded model or network access.
+enabled = true
+sample_interval_s = 1.0
+gallery_ttl_s = 120.0
+min_confidence = 0.35
+min_box_width_px = 32
+min_box_height_px = 64
+match_similarity = 0.88
+match_margin = 0.06
+match_confirmations = 2
+max_initial_samples = 4
+update_similarity = 0.75
+max_samples_per_person = 8
 
 [target]
 min_confidence = 0.10

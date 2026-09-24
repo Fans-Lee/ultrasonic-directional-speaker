@@ -1,3 +1,5 @@
+**本项目没有参考任何开源项目，包括硬件实现、3D打印建模、软件实现。仅在作品构思阶段参考了一些现有成品的原理及作者反馈的问题。**
+
 # 超声参量阵定向音响
 
 > 文档版本：v5.1（2026-09-13）
@@ -25,6 +27,9 @@ GPIO4  → SN74HC125 扇出 12 路 → 12 片 TC4428 → 120 个 TCT40-16T
 | 独立音频测试 | `utils/mic_stream_cli.py` | 不启动视觉和 UI，单独测试麦克风/电脑音频串流 |
 | 文件串流诊断 | `utils/audio_stream_probe.py` | 把内置 PCM 原字节发给 ESP32，排查传输与调制问题 |
 | Flash 音频转换 | `utils/wav_to_audio_header.py` | 把 PCM WAV 转为固件的 `audio_data.h` |
+| 离线声学校准 | `utils/audio_calibration/calibrate.py` | 生成实验 PCM、拟合固定非线性模型、评估和预失真；不启动 Qt 或串口 |
+| 单音录音试训 | `utils/audio_calibration/tone_pilot.py` | 对无配对输入的单音 WAV 拟合录音谐波轮廓；详见 `docs/16-单音录音试训.md` |
+| 手机录音带通诊断 | `utils/audio_calibration/bandpass_wav.py` | 离线保留 250–3000 Hz，输出滤波 WAV 与频带电平报告；见 `docs/16-手机录音带通诊断.md` |
 
 正式桌面端使用 `python -m vision_gimbal`。`src/cv_test_deprecated` 和 `src/esp32_s3_4x3_min_test_deprecated` 只是历史实现，不是当前入口。
 
@@ -114,6 +119,12 @@ uv run python -m vision_gimbal --camera-index 0 --serial-port COM5
 ```powershell
 uv run python -m sounddevice
 ```
+
+### 人物再次出现时的编号
+
+视觉流水线会为合格的人体检测框提取服饰颜色特征，并在本次运行期间维护人物编号。新轨迹会立即抽样，最多取四次合格特征确定编号；已编号的轨迹默认每 1 秒再抽样一次，Kalman 预测框不会抽样。与历史人物连续两次匹配后，新轨迹会复用原编号。身份库默认保留离开画面人物 120 秒，程序关闭后清空。
+
+这一路径只使用 CPU 和现有 OpenCV，不需要下载模型。它主要适用于同一摄像头、同一场次且衣着未变的情况；相似衣着、强遮挡或换装时可能认错或无法认回。人物未取得可靠特征前，框上显示 `ID ?`，不能选为自动追踪目标。目标丢失超过 0.8 秒后仍会停止自动追踪；人物被再次认出时可直接点击“开始追踪”，不会自行重启云台。参数在 `configs/vision_gimbal.toml` 的 `[vision.appearance]` 中调整。
 
 ## 4. 可选的深度与声场显示
 
