@@ -85,6 +85,7 @@ class AudioStreamTelemetry:
     host_sent_samples: int = 0
     host_tx_queue_packets: int = 0
     status_age_ms: int | None = None
+    device_volume_permille: int | None = None
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,7 @@ class AudioControlStatus:
     source_open: bool = False
     array_active: bool = False
     settings: AudioModeSettings = field(default_factory=AudioModeSettings)
+    volume_percent: int = 50
     telemetry: AudioStreamTelemetry = field(default_factory=AudioStreamTelemetry)
     last_error: str = ""
 

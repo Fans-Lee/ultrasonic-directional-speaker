@@ -36,6 +36,7 @@ from vision_gimbal.domain.geometry import GimbalPose
 from vision_gimbal.domain.intents import (
     ConfigureAudio,
     SelectAudioSource,
+    SetAudioVolume,
     StartAudio,
     StopAudio,
 )
@@ -106,6 +107,8 @@ class _FakeAudioService:
         self.transmitting = False
         self.source = AudioSourceKind.MICROPHONE
         self.settings = AudioModeSettings()
+        self.volume_percent = 50
+        self.volume_calls = []
         self.errors = []
         self.spectrum_refresh_hz = 20.0
 
@@ -124,6 +127,10 @@ class _FakeAudioService:
     def select_source(self, source) -> None:
         self.source = source
 
+    def set_volume(self, percent) -> None:
+        self.volume_percent = percent
+        self.volume_calls.append(percent)
+
     def record_error(self, error) -> None:
         self.errors.append(str(error))
 
@@ -136,6 +143,7 @@ class _FakeAudioService:
             source_open=self.transmitting,
             array_active=self.transmitting,
             settings=self.settings,
+            volume_percent=self.volume_percent,
         )
 
     def spectrum_snapshot(self) -> AudioSpectrumSnapshot:
@@ -211,6 +219,11 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         application.submit(StopAudio())
         stopped = application.tick()
         self.assertFalse(stopped.audio.transmitting)
+        for percent in (10, 20, 30):
+            application.submit(SetAudioVolume(percent))
+        updated = application.tick()
+        self.assertEqual(updated.audio.volume_percent, 30)
+        self.assertEqual(audio.volume_calls, [30])
         application.close()
 
     def test_runtime_publishes_latest_spectrum_snapshot(self):
@@ -239,13 +252,15 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         stops = []
         settings_events = []
         source_events = []
+        volume_events = []
         panel.start_requested.connect(lambda: starts.append(True))
         panel.stop_requested.connect(lambda: stops.append(True))
         panel.settings_requested.connect(settings_events.append)
         panel.source_requested.connect(source_events.append)
+        panel.volume_requested.connect(volume_events.append)
         snapshot = replace(
             _FakeControlService().tick(),
-            serial=SerialLinkStatus(enabled=True, connected=True),
+            serial=SerialLinkStatus(enabled=True, connected=True, volume_supported=True),
             audio=AudioControlStatus(enabled=True),
         )
         panel.apply(present(snapshot))
@@ -260,6 +275,11 @@ class QtApplicationRuntimeTests(unittest.TestCase):
         self.assertIs(
             settings_events[-1].processing, AudioProcessingMode.LOUD
         )
+        panel.volume_slider.setValue(25)
+        event_loop = QEventLoop()
+        QTimer.singleShot(80, event_loop.quit)
+        event_loop.exec()
+        self.assertEqual(volume_events, [25])
 
         transmitting = replace(
             snapshot,

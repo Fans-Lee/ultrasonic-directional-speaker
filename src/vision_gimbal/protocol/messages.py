@@ -23,6 +23,7 @@ class MessageType(IntEnum):
     SET_MUTE = 0x05
     GIMBAL_SETPOINT = 0x06
     PING = 0x07
+    SET_VOLUME = 0x08
 
     HELLO_ACK = 0x81
     COMMAND_ACK = 0x82
@@ -66,8 +67,10 @@ STREAM_START = struct.Struct("<IHHBBBBBBH")
 ACK = struct.Struct("<BBHI")
 GIMBAL = struct.Struct("<hh")
 MUTE = struct.Struct("<B")
+VOLUME = struct.Struct("<H")
 PING = struct.Struct("<I")
 STATUS = struct.Struct("<BBHHHIIIIIHH")
+VOLUME_CAPABILITY = 1 << 2
 
 
 @dataclass(frozen=True)
@@ -141,6 +144,7 @@ class DeviceStatusPayload:
     sequence_gap_count: int
     timer_skipped_samples: int
     last_audio_age_ms: int
+    target_volume_permille: int
 
     @classmethod
     def unpack(cls, payload: bytes) -> DeviceStatusPayload:
@@ -159,6 +163,7 @@ class DeviceStatusPayload:
             sequence_gap_count=values[8],
             timer_skipped_samples=values[9],
             last_audio_age_ms=values[10],
+            target_volume_permille=values[11],
         )
 
 

@@ -27,6 +27,9 @@ class NullDeviceLink:
     def set_mute(self, enabled: bool) -> None:
         del enabled
 
+    def set_volume(self, permille: int) -> None:
+        del permille
+
     def serial_status(self) -> SerialLinkStatus:
         return SerialLinkStatus(enabled=False, connected=False)
 

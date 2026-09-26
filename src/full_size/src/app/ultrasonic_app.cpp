@@ -193,7 +193,19 @@ void UltrasonicApp::handleSerial() {
 
     if (input == '\r' || input == '\n' || input == ' ') {
       if (numericInputActive_) handleNumericInput();
+      else if (volumeInputActive_) {
+        volumeInputActive_ = false;
+        Serial.println("VOLUME ERROR: enter V0..V100, then press Enter");
+      }
       continue;
+    }
+
+    if (volumeInputActive_) {
+      volumeInputActive_ = false;
+      numericInputValue_ = 0;
+      numericInputActive_ = false;
+      numericInputOverflow_ = false;
+      Serial.println("VOLUME ERROR: enter V0..V100, then press Enter");
     }
 
     if (numericInputActive_) {
@@ -247,6 +259,9 @@ void UltrasonicApp::handleSerial() {
         break;
       case 'L':
         enqueue(CommandType::kAudioLoop);
+        break;
+      case 'V':
+        volumeInputActive_ = true;
         break;
       case 'H':
       case '?':
@@ -309,6 +324,26 @@ void UltrasonicApp::handleProtocolMessage(const ProtocolMessage& message) {
       Command command = {};
       command.type = CommandType::kProtocolMute;
       command.value = message.payload[0];
+      command.requestSequence = message.sequence;
+      if (!enqueue(command)) {
+        protocol_.sendAck(message.type, message.sequence, 1, 1);
+      }
+      break;
+    }
+    case ProtocolMessageType::kSetVolume: {
+      if (message.payloadLength != 2) {
+        protocol_.sendAck(message.type, message.sequence, 1, 2);
+        break;
+      }
+      const uint16_t permille = static_cast<uint16_t>(message.payload[0]) |
+                                (static_cast<uint16_t>(message.payload[1]) << 8);
+      if (permille > 1000) {
+        protocol_.sendAck(message.type, message.sequence, 1, 4);
+        break;
+      }
+      Command command = {};
+      command.type = CommandType::kProtocolVolume;
+      command.value = permille;
       command.requestSequence = message.sequence;
       if (!enqueue(command)) {
         protocol_.sendAck(message.type, message.sequence, 1, 1);
@@ -457,7 +492,10 @@ void UltrasonicApp::reportProtocolStatus() {
                                              : now - lastAudioDataMs_;
   ProtocolStatus status = {};
   status.state = protocolStreamState_;
-  status.muted = protocolMuted_ || !sampleTimerRunning_;
+  status.muted = protocolMuted_ || !sampleTimerRunning_ ||
+                 reportedAudioVolumeOff_.load(std::memory_order_relaxed);
+  status.targetVolumePermille =
+      reportedVolumePermille_.load(std::memory_order_relaxed);
   status.bufferFillSamples = static_cast<uint16_t>(stream.bufferedSamples);
   status.bufferCapacitySamples = static_cast<uint16_t>(stream.capacitySamples);
   status.underrunCount = stream.underrunCount;
@@ -566,12 +604,22 @@ void UltrasonicApp::handlePoseInput() {
 void UltrasonicApp::handleNumericInput() {
   const uint32_t value = numericInputValue_;
   const bool overflow = numericInputOverflow_;
+  const bool isVolume = volumeInputActive_;
   numericInputValue_ = 0;
   numericInputActive_ = false;
   numericInputOverflow_ = false;
+  volumeInputActive_ = false;
 
   if (overflow) {
     Serial.println("NUMBER ERROR: value is too large");
+    return;
+  }
+  if (isVolume) {
+    if (value > 100) {
+      Serial.println("VOLUME ERROR: enter V0..V100, then press Enter");
+      return;
+    }
+    enqueue(CommandType::kLocalVolume, value * 10);
     return;
   }
   if (value == 0) {
@@ -608,6 +656,7 @@ void UltrasonicApp::printHelp() const {
   Serial.println("C : reset carrier to 40 kHz; F : report actual carrier");
   Serial.println("P : play embedded audio once");
   Serial.println("L : loop embedded audio");
+  Serial.println("V0..V100 + Enter : set embedded/live audio volume");
   Serial.println("(pan,tilt) : set GPIO6/GPIO5 signed angles, e.g. (-10,30)");
   Serial.println("H : print this help");
   Serial.println("Power-up default: gimbal (0,0), ultrasonic output muted.");
@@ -694,6 +743,30 @@ bool UltrasonicApp::handleCommand(const Command& command) {
     case CommandType::kProtocolMute:
       setProtocolMute(command.value != 0, command.requestSequence);
       return true;
+    case CommandType::kLocalVolume:
+      modulationEngine_.setAudioVolume(
+          static_cast<uint16_t>(command.value), !sampleTimerRunning_);
+      reportedVolumePermille_.store(static_cast<uint16_t>(command.value),
+                                    std::memory_order_relaxed);
+      if (!sampleTimerRunning_) {
+        reportedAudioVolumeOff_.store(modulationEngine_.audioOutputMuted(),
+                                      std::memory_order_relaxed);
+      }
+      Serial.printf("AUDIO VOLUME: %lu%%\r\n",
+                    static_cast<unsigned long>(command.value / 10));
+      return false;
+    case CommandType::kProtocolVolume:
+      modulationEngine_.setAudioVolume(
+          static_cast<uint16_t>(command.value), !sampleTimerRunning_);
+      reportedVolumePermille_.store(static_cast<uint16_t>(command.value),
+                                    std::memory_order_relaxed);
+      if (!sampleTimerRunning_) {
+        reportedAudioVolumeOff_.store(modulationEngine_.audioOutputMuted(),
+                                      std::memory_order_relaxed);
+      }
+      protocol_.sendAck(ProtocolMessageType::kSetVolume,
+                        command.requestSequence);
+      return false;
     case CommandType::kProtocolHello:
       startProtocolSession(command.requestSequence);
       return true;
@@ -939,6 +1012,8 @@ void UltrasonicApp::renderTimedSample() {
                          "write modulation frame")) {
     return;
   }
+  reportedAudioVolumeOff_.store(modulationEngine_.audioOutputMuted(),
+                                std::memory_order_relaxed);
 
   if (frame.status == ModulationFrameStatus::kCompleted) {
     completeAudioPlayback();

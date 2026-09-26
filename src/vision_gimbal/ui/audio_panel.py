@@ -1,6 +1,6 @@
 """Live microphone and ultrasonic modulation controls."""
 
-from PySide6.QtCore import QPointF, Signal
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -62,16 +63,35 @@ class AudioModeComboBox(QComboBox):
         )
 
 
+class AudioVolumeSlider(QSlider):
+    """Keep sidebar wheel scrolling separate from intentional volume changes."""
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        parent = self.parentWidget()
+        while parent is not None:
+            if isinstance(parent, QScrollArea):
+                QApplication.sendEvent(parent.viewport(), event)
+                return
+            parent = parent.parentWidget()
+        event.ignore()
+
+
 class AudioPanel(QWidget):
     start_requested = Signal()
     stop_requested = Signal()
     source_requested = Signal(object)
     settings_requested = Signal(object)
+    volume_requested = Signal(int)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setProperty("card", True)
         self._applying = False
+        self._last_sent_volume: int | None = None
+        self._volume_timer = QTimer(self)
+        self._volume_timer.setSingleShot(True)
+        self._volume_timer.setInterval(50)
+        self._volume_timer.timeout.connect(self._emit_volume)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
@@ -135,6 +155,26 @@ class AudioPanel(QWidget):
         settings_card.setLayout(grid)
         layout.addWidget(settings_card)
 
+        volume_card = QFrame()
+        volume_card.setProperty("role", "inset")
+        volume_layout = QVBoxLayout(volume_card)
+        volume_layout.setContentsMargins(12, 10, 12, 10)
+        volume_header = QGridLayout()
+        volume_label = QLabel("主音量")
+        volume_label.setProperty("role", "metric-label")
+        self.volume_value = QLabel("50%")
+        self.volume_value.setProperty("role", "metric-value")
+        volume_header.addWidget(volume_label, 0, 0)
+        volume_header.addWidget(self.volume_value, 0, 1, alignment=Qt.AlignmentFlag.AlignRight)
+        volume_layout.addLayout(volume_header)
+        self.volume_slider = AudioVolumeSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setValue(50)
+        self.volume_slider.setEnabled(False)
+        self.volume_slider.setAccessibleName("主音量")
+        volume_layout.addWidget(self.volume_slider)
+        layout.addWidget(volume_card)
+
         button_grid = QGridLayout()
         button_grid.setHorizontalSpacing(8)
         self.start_button = QPushButton("开始音频链路")
@@ -154,6 +194,8 @@ class AudioPanel(QWidget):
         self.modulation_combo.currentIndexChanged.connect(self._emit_settings)
         self.boost_check.toggled.connect(self._emit_settings)
         self.boost_check.toggled.connect(self._update_boost_presentation)
+        self.volume_slider.valueChanged.connect(self._volume_changed)
+        self.volume_slider.sliderReleased.connect(self._emit_volume)
         self._update_boost_presentation(False)
 
     def _emit_source(self, *_args) -> None:
@@ -190,6 +232,18 @@ class AudioPanel(QWidget):
         style.unpolish(self.boost_check)
         style.polish(self.boost_check)
 
+    def _volume_changed(self, value: int) -> None:
+        self.volume_value.setText("静音" if value == 0 else f"{value}%")
+        if not self._applying and not self._volume_timer.isActive():
+            self._volume_timer.start()
+
+    def _emit_volume(self) -> None:
+        self._volume_timer.stop()
+        value = self.volume_slider.value()
+        if not self._applying and value != self._last_sent_volume:
+            self._last_sent_volume = value
+            self.volume_requested.emit(value)
+
     def apply(self, view: MainWindowViewModel) -> None:
         self.state_value.setText(f"链路状态：{view.audio_state_text}")
         self.detail_value.setText(view.audio_detail)
@@ -199,6 +253,7 @@ class AudioPanel(QWidget):
         self.processing_combo.setEnabled(view.audio_controls_enabled)
         self.modulation_combo.setEnabled(view.audio_controls_enabled)
         self.boost_check.setEnabled(view.audio_controls_enabled)
+        self.volume_slider.setEnabled(view.audio_volume_enabled)
 
         settings = view.audio_settings
         self._applying = True
@@ -217,5 +272,7 @@ class AudioPanel(QWidget):
             if modulation_index >= 0:
                 self.modulation_combo.setCurrentIndex(modulation_index)
             self.boost_check.setChecked(settings.drive == AudioDriveMode.BOOST)
+            if not self.volume_slider.isSliderDown():
+                self.volume_slider.setValue(view.audio_volume_percent)
         finally:
             self._applying = False

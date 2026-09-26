@@ -18,6 +18,8 @@ from ..protocol.messages import (
     HELLO_ACK,
     MUTE,
     PING,
+    VOLUME,
+    VOLUME_CAPABILITY,
     DeviceStatusPayload,
     FrameFlags,
     MessageType,
@@ -63,6 +65,8 @@ class SerialDeviceLink:
         self._latest_gimbal: bytes | None = None
         self._gimbal_dirty = False
         self._desired_stream: StreamStart | None = None
+        self._desired_volume_permille = 1000
+        self._volume_supported: bool | None = None
         self._stream_revision = 0
         self._protocol_ready = False
         self._stream_ready = False
@@ -106,6 +110,7 @@ class SerialDeviceLink:
             self._protocol_ready = False
             self._stream_ready = False
             self._audio_queue.clear()
+            self._volume_supported = None
 
     def publish_gimbal(self, setpoint: GimbalSetpoint) -> None:
         payload = pack_gimbal_setpoint(setpoint.pan_degrees, setpoint.tilt_degrees)
@@ -116,11 +121,15 @@ class SerialDeviceLink:
 
     def start_audio_stream(self, parameters: StreamStart) -> None:
         with self._condition:
+            if self._volume_supported is False:
+                raise RuntimeError("当前固件不支持音量控制，请升级固件")
             self._stream_revision += 1
             self._desired_stream = parameters
             self._stream_ready = False
             self._audio_queue.clear()
             if self._protocol_ready:
+                if self._volume_supported:
+                    self._queue_volume_locked()
                 self._queue_control_locked(
                     MessageType.STREAM_START,
                     parameters.pack(),
@@ -142,6 +151,7 @@ class SerialDeviceLink:
             self._desired_stream = None
             self._stream_ready = False
             self._audio_queue.clear()
+            self._remove_queued_volume_locked()
             if self._protocol_ready:
                 self._queue_control_locked(
                     MessageType.STREAM_STOP, b"\x00", ack_required=True
@@ -150,11 +160,27 @@ class SerialDeviceLink:
     def set_mute(self, enabled: bool) -> None:
         with self._condition:
             if self._protocol_ready:
+                if enabled:
+                    self._remove_queued_volume_locked()
                 self._queue_control_locked(
                     MessageType.SET_MUTE,
                     MUTE.pack(1 if enabled else 0),
                     ack_required=True,
                 )
+
+    def set_volume(self, permille: int) -> None:
+        if (
+            isinstance(permille, bool)
+            or not isinstance(permille, int)
+            or not 0 <= permille <= 1000
+        ):
+            raise ValueError("audio volume must be in [0, 1000] permille")
+        with self._condition:
+            if self._volume_supported is False:
+                raise RuntimeError("当前固件不支持音量控制，请升级固件")
+            self._desired_volume_permille = permille
+            if self._protocol_ready and self._volume_supported:
+                self._queue_volume_locked()
 
     def serial_status(self) -> SerialLinkStatus:
         with self._condition:
@@ -163,6 +189,7 @@ class SerialDeviceLink:
                 connected=self._connected,
                 last_response=self._last_response,
                 last_error=self._last_error,
+                volume_supported=self._volume_supported,
             )
 
     def audio_status(self) -> AudioStreamTelemetry:
@@ -203,6 +230,29 @@ class SerialDeviceLink:
         )
         self._condition.notify_all()
 
+    def _remove_queued_volume_locked(self) -> None:
+        self._control_queue = collections.deque(
+            item
+            for item in self._control_queue
+            if item.message_type is not MessageType.SET_VOLUME
+        )
+
+    def _queue_volume_locked(self) -> None:
+        """Replace stale slider commands and precede an unsent stream start."""
+        self._remove_queued_volume_locked()
+        outbound = _Outbound(
+            MessageType.SET_VOLUME,
+            VOLUME.pack(self._desired_volume_permille),
+            ack_required=True,
+        )
+        for index, item in enumerate(self._control_queue):
+            if item.message_type is MessageType.STREAM_START:
+                self._control_queue.insert(index, outbound)
+                break
+        else:
+            self._control_queue.append(outbound)
+        self._condition.notify_all()
+
     def _run(self) -> None:
         try:
             import serial
@@ -230,10 +280,11 @@ class SerialDeviceLink:
                     self._protocol_ready = False
                     self._stream_ready = False
                     self._connected = False
+                    self._volume_supported = None
                     self._control_queue.clear()
                     self._audio_queue.clear()
                     self._last_status_received_at = None
-                hello = HELLO.pack(512, 100, 0x00000003)
+                hello = HELLO.pack(512, 100, 0x00000003 | VOLUME_CAPABILITY)
                 self._send_outbound(
                     device,
                     _Outbound(MessageType.HELLO, hello, ack_required=True),
@@ -271,12 +322,14 @@ class SerialDeviceLink:
                     self._connected = False
                     self._protocol_ready = False
                     self._stream_ready = False
+                    self._volume_supported = None
                     self._audio_queue.clear()
                     self._audio_status = replace(
                         self._audio_status,
                         state=StreamState.MUTED,
                         muted=True,
                         buffer_fill_samples=0,
+                        device_volume_permille=None,
                     )
                 if device is not None:
                     try:
@@ -365,6 +418,8 @@ class SerialDeviceLink:
         if message_type is MessageType.HELLO_ACK:
             if len(frame.payload) != HELLO_ACK.size:
                 return
+            _max_payload, _buffer_samples, capabilities = HELLO_ACK.unpack(frame.payload)
+            volume_supported = bool(capabilities & VOLUME_CAPABILITY)
             pending_sequences = [
                 sequence
                 for sequence, item in pending.items()
@@ -375,9 +430,15 @@ class SerialDeviceLink:
             with self._condition:
                 self._protocol_ready = True
                 self._connected = True
+                self._volume_supported = volume_supported
                 self._last_response = "protocol v1 connected"
-                self._last_error = ""
-                if self._desired_stream is not None:
+                self._last_error = (
+                    "当前固件不支持音量控制，请升级固件"
+                    if not volume_supported else ""
+                )
+                if volume_supported:
+                    self._queue_volume_locked()
+                if volume_supported and self._desired_stream is not None:
                     self._queue_control_locked(
                         MessageType.STREAM_START,
                         self._desired_stream.pack(),
@@ -426,6 +487,10 @@ class SerialDeviceLink:
                     sequence_gap_count=status.sequence_gap_count,
                     timer_skipped_samples=status.timer_skipped_samples,
                     last_audio_age_ms=status.last_audio_age_ms,
+                    device_volume_permille=(
+                        status.target_volume_permille
+                        if self._volume_supported else None
+                    ),
                 )
                 self._last_response = (
                     f"audio={status.state.name} buffer="

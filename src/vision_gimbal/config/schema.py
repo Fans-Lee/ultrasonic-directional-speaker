@@ -461,6 +461,17 @@ class AudioSpectrumConfig:
 
 
 @dataclass(frozen=True)
+class AudioVolumeConfig:
+    default_percent: int = 50
+
+    def __post_init__(self) -> None:
+        if isinstance(self.default_percent, bool) or not isinstance(
+            self.default_percent, int
+        ) or not 0 <= self.default_percent <= 100:
+            raise ValueError("audio.volume.default_percent must be in [0, 100]")
+
+
+@dataclass(frozen=True)
 class AudioConfig:
     enabled: bool = False
     auto_start: bool = True
@@ -470,6 +481,7 @@ class AudioConfig:
         default_factory=AudioActivityGateConfig
     )
     stream: AudioStreamConfig = field(default_factory=AudioStreamConfig)
+    volume: AudioVolumeConfig = field(default_factory=AudioVolumeConfig)
     recording: AudioRecordingConfig = field(default_factory=AudioRecordingConfig)
     spectrum: AudioSpectrumConfig = field(default_factory=AudioSpectrumConfig)
 

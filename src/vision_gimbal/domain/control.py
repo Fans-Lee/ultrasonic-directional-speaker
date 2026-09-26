@@ -42,6 +42,7 @@ class SerialLinkStatus:
     connected: bool = False
     last_response: str = ""
     last_error: str = ""
+    volume_supported: bool | None = None
 
 
 @dataclass(frozen=True)

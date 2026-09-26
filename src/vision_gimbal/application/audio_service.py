@@ -94,6 +94,7 @@ class AudioService:
                 config.stream.modulation.lower().replace("-", "_")
             ),
         )
+        self._volume_percent = config.volume.default_percent
         self._pending_pcm = bytearray()
         self._sample_index = 0
         self._capture_overrun_count = 0
@@ -119,6 +120,10 @@ class AudioService:
     def start(self) -> None:
         if not self.config.enabled:
             return
+        try:
+            self.device_link.set_volume(self._volume_percent * 10)
+        except RuntimeError as error:
+            self.record_error(error)
         with self._state_lock:
             if self._thread is not None and self._thread.is_alive():
                 return
@@ -130,7 +135,10 @@ class AudioService:
         if self.spectrum is not None:
             self.spectrum.start()
         if self.config.auto_start:
-            self.start_transmitting()
+            try:
+                self.start_transmitting()
+            except RuntimeError as error:
+                self.record_error(error)
 
     def close(self) -> None:
         if not self.config.enabled:
@@ -153,6 +161,9 @@ class AudioService:
     def start_transmitting(self) -> None:
         if not self.config.enabled:
             raise RuntimeError("音频链路已在配置中禁用")
+        serial_status = getattr(self.device_link, "serial_status", None)
+        if callable(serial_status) and serial_status().volume_supported is False:
+            raise RuntimeError("当前固件不支持音量控制，请升级固件")
         with self._state_lock:
             if self._thread is None or not self._thread.is_alive():
                 raise RuntimeError("音频服务尚未启动")
@@ -279,6 +290,18 @@ class AudioService:
         if restart:
             self.start_transmitting()
 
+    def set_volume(self, percent: int) -> None:
+        """Change the shared device gain without restarting capture or the stream."""
+        if (
+            isinstance(percent, bool)
+            or not isinstance(percent, int)
+            or not 0 <= percent <= 100
+        ):
+            raise ValueError("audio volume must be in [0, 100]")
+        with self._state_lock:
+            self._volume_percent = percent
+        self.device_link.set_volume(percent * 10)
+
     def select_source(self, source: AudioSourceKind) -> None:
         """Select a capture source; an active stream is restarted safely."""
         source = AudioSourceKind(source)
@@ -307,6 +330,7 @@ class AudioService:
             source_open = self._source_open
             array_active = self._device_stream_active
             settings = self._settings
+            volume_percent = self._volume_percent
             last_error = self._last_error
             source = self.sources.get(active_source) if active_source else None
         reported_source_open = getattr(source, "is_open", None)
@@ -323,6 +347,7 @@ class AudioService:
             source_open=source_open,
             array_active=array_active,
             settings=settings,
+            volume_percent=volume_percent,
             telemetry=self.status(),
             last_error=last_error,
         )

@@ -1,10 +1,12 @@
 """Framework-neutral lifecycle for vision, control, audio, and the device link."""
 
 import queue
+import threading
 from dataclasses import replace
 
 from ..domain.intents import (
     ConfigureAudio,
+    SetAudioVolume,
     SelectAudioSource,
     StartAudio,
     StopAudio,
@@ -27,8 +29,14 @@ class ApplicationRuntime:
         self.device_link = device_link
         self._started = False
         self._audio_intents = queue.Queue()
+        self._volume_lock = threading.Lock()
+        self._pending_volume: int | None = None
 
     def submit(self, intent) -> None:
+        if isinstance(intent, SetAudioVolume):
+            with self._volume_lock:
+                self._pending_volume = intent.percent
+            return
         if isinstance(
             intent, (StartAudio, StopAudio, ConfigureAudio, SelectAudioSource)
         ):
@@ -79,7 +87,7 @@ class ApplicationRuntime:
             try:
                 intent = self._audio_intents.get_nowait()
             except queue.Empty:
-                return
+                break
             if self.audio is None:
                 continue
             try:
@@ -91,5 +99,13 @@ class ApplicationRuntime:
                     self.audio.configure(intent.settings)
                 elif isinstance(intent, SelectAudioSource):
                     self.audio.select_source(intent.source)
+            except Exception as error:  # noqa: BLE001 - user-action boundary
+                self.audio.record_error(error)
+        with self._volume_lock:
+            volume = self._pending_volume
+            self._pending_volume = None
+        if self.audio is not None and volume is not None:
+            try:
+                self.audio.set_volume(volume)
             except Exception as error:  # noqa: BLE001 - user-action boundary
                 self.audio.record_error(error)

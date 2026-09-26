@@ -26,6 +26,7 @@ from vision_gimbal.config.schema import (
     AudioCaptureConfig,
     AudioConfig,
     AudioRecordingConfig,
+    AudioVolumeConfig,
 )
 from vision_gimbal.domain.audio import (
     AudioDriveMode,
@@ -68,6 +69,7 @@ class _DeviceLink:
         self.parameter_history = []
         self.packets = []
         self.mutes = []
+        self.volumes = []
         self.stopped = False
         self.stop_count = 0
         self.telemetry = AudioStreamTelemetry()
@@ -85,6 +87,9 @@ class _DeviceLink:
 
     def set_mute(self, enabled: bool) -> None:
         self.mutes.append(enabled)
+
+    def set_volume(self, permille: int) -> None:
+        self.volumes.append(permille)
 
     def audio_status(self) -> AudioStreamTelemetry:
         return self.telemetry
@@ -263,6 +268,32 @@ class AudioPreprocessorTests(unittest.TestCase):
 
 
 class AudioServiceTests(unittest.TestCase):
+    def test_volume_config_rejects_out_of_range_values(self):
+        self.assertEqual(AudioVolumeConfig().default_percent, 50)
+        for invalid in (-1, 101, True, 25.5):
+            with self.assertRaises(ValueError):
+                AudioVolumeConfig(default_percent=invalid)
+
+    def test_volume_changes_do_not_restart_live_stream(self):
+        config = replace(AudioConfig(enabled=True), auto_start=False)
+        microphone = _Microphone()
+        link = _DeviceLink()
+        service = AudioService(
+            config,
+            {AudioSourceKind.MICROPHONE: microphone},
+            AudioPreprocessor(config.capture, config.dsp, config.stream),
+            link,
+        )
+        service.start()
+        service.start_transmitting()
+        service.set_volume(25)
+        service.set_volume(0)
+        self.assertEqual(link.volumes, [500, 250, 0])
+        self.assertEqual(service.control_status().volume_percent, 0)
+        self.assertEqual(len(link.parameter_history), 1)
+        self.assertEqual(microphone.start_count, 1)
+        service.close()
+
     def test_audio_mode_settings_normalize_string_values_from_qt(self):
         settings = AudioModeSettings(
             processing="loud",

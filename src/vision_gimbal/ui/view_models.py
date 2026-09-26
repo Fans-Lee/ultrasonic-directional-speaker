@@ -27,3 +27,5 @@ class MainWindowViewModel:
     audio_start_enabled: bool
     audio_stop_enabled: bool
     audio_controls_enabled: bool
+    audio_volume_percent: int
+    audio_volume_enabled: bool

@@ -35,6 +35,8 @@ from vision_gimbal.protocol.messages import (
     MessageType,
     StreamStart,
     StreamState,
+    VOLUME,
+    VOLUME_CAPABILITY,
     pack_gimbal_setpoint,
 )
 
@@ -102,6 +104,7 @@ class _ProtocolSerial:
         self._device_sequence = 0
         self.received_types = []
         self.audio_payloads = []
+        self.volume_payloads = []
 
     @property
     def in_waiting(self) -> int:
@@ -122,13 +125,16 @@ class _ProtocolSerial:
                 self._respond(
                     frame,
                     MessageType.HELLO_ACK,
-                    HELLO_ACK.pack(512, 2048, 3),
+                    HELLO_ACK.pack(512, 2048, 3 | VOLUME_CAPABILITY),
                 )
             elif message_type in {
                 MessageType.STREAM_START,
                 MessageType.STREAM_STOP,
                 MessageType.SET_MUTE,
+                MessageType.SET_VOLUME,
             }:
+                if message_type is MessageType.SET_VOLUME:
+                    self.volume_payloads.append(VOLUME.unpack(frame.payload)[0])
                 self._respond(
                     frame,
                     MessageType.COMMAND_ACK,
@@ -216,6 +222,57 @@ class SerialDeviceLinkTests(unittest.TestCase):
         self.assertEqual(status.timer_skipped_samples, 5)
         self.assertIn("gap=4", link.serial_status().last_response)
 
+    def test_volume_commands_coalesce_before_stream_start(self):
+        link = SerialDeviceLink(SerialConfig(port="TEST"))
+        link._protocol_ready = True
+        link._volume_supported = True
+        for volume in (100, 250, 600):
+            link.set_volume(volume)
+        link.start_audio_stream(StreamStart())
+        queued = list(link._control_queue)
+        self.assertEqual(
+            [item.message_type for item in queued],
+            [MessageType.SET_VOLUME, MessageType.STREAM_START],
+        )
+        self.assertEqual(VOLUME.unpack(queued[0].payload)[0], 600)
+
+    def test_old_firmware_cannot_start_stream_at_unapplied_volume(self):
+        class OldFirmware(_ProtocolSerial):
+            def _respond(self, request, message_type, payload):
+                if message_type is MessageType.HELLO_ACK:
+                    payload = HELLO_ACK.pack(512, 2048, 3)
+                super()._respond(request, message_type, payload)
+
+        fake = OldFirmware()
+        with patch.dict(sys.modules, serial=types.SimpleNamespace(Serial=lambda **_: fake)):
+            link = SerialDeviceLink(SerialConfig(port="TEST", startup_delay_s=0.0))
+            link.set_volume(500)
+            link.start_audio_stream(StreamStart())
+            try:
+                link.start()
+                deadline = time.monotonic() + 1.0
+                while not link.serial_status().connected and time.monotonic() < deadline:
+                    time.sleep(0.005)
+                self.assertFalse(link.serial_status().volume_supported)
+                self.assertNotIn(MessageType.STREAM_START, fake.received_types)
+                with self.assertRaises(RuntimeError):
+                    link.start_audio_stream(StreamStart())
+            finally:
+                link.close()
+
+    def test_status_reports_device_volume_only_with_capability(self):
+        link = SerialDeviceLink(SerialConfig(port="TEST"))
+        link._volume_supported = True
+        link._handle_frame(
+            Frame(
+                MessageType.STATUS,
+                STATUS.pack(StreamState.PLAYING, 0, 0, 480, 2048,
+                            0, 0, 0, 0, 0, 0, 420),
+            ),
+            {},
+        )
+        self.assertEqual(link.audio_status().device_volume_permille, 420)
+
     def test_lost_start_ack_does_not_restart_stream_after_mute_ack(self):
         class LostStartAckSerial(_ProtocolSerial):
             """Model the firmware's one-entry duplicate ACK cache."""
@@ -291,6 +348,10 @@ class SerialDeviceLinkTests(unittest.TestCase):
                 time.sleep(0.005)
             self.assertEqual(fake.audio_payloads, [bytes([128]) * 160])
             self.assertIn(MessageType.STREAM_START, fake.received_types)
+            self.assertLess(
+                fake.received_types.index(MessageType.SET_VOLUME),
+                fake.received_types.index(MessageType.STREAM_START),
+            )
         finally:
             link.close()
             if original_serial is None:
