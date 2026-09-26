@@ -21,6 +21,7 @@ from ..config.schema import UiConfig
 from ..domain.intents import (
     ClearManualKeys,
     ConfigureAudio,
+    SetAudioVolume,
     ManualKeyChanged,
     SelectAudioSource,
     SelectTarget,
@@ -145,6 +146,9 @@ class MainWindow(QMainWindow):
         )
         self.audio.source_requested.connect(
             lambda source: self.intent_emitted.emit(SelectAudioSource(source))
+        )
+        self.audio.volume_requested.connect(
+            lambda percent: self.intent_emitted.emit(SetAudioVolume(percent))
         )
         self.key_filter.direction_changed.connect(self._manual_key)
         self.key_filter.clear_requested.connect(

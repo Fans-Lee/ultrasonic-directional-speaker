@@ -14,7 +14,7 @@ class AudioModulator final {
   bool begin(const DutyConfig& dutyConfig);
   uint32_t dutyForSample(uint8_t sample, AudioModulationMode modulationMode,
                          AudioProcessingMode processingMode,
-                         AudioDriveMode driveMode) const;
+                         AudioDriveMode driveMode, uint32_t gainQ15) const;
 
  private:
   DsbAmModulator standardDsbAmModulator_;

@@ -42,6 +42,8 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
     }[audio.selected_source]
     if not audio.enabled:
         audio_state_text = "配置已禁用"
+    elif snapshot.serial.connected and snapshot.serial.volume_supported is False:
+        audio_state_text = "固件需更新"
     elif audio.transmitting and snapshot.serial.connected:
         if not audio.source_open:
             audio_state_text = "启动中"
@@ -69,6 +71,12 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         f"欠载 {telemetry.underrun_count} · 主机丢包 "
         f"{telemetry.host_tx_overrun_count + telemetry.host_capture_overrun_count}"
     )
+    audio_detail += f" · 音量 {audio.volume_percent}%"
+    confirmed_volume = telemetry.device_volume_permille
+    if snapshot.serial.volume_supported is False:
+        audio_detail += "\n当前固件不支持连续音量，请升级固件"
+    elif snapshot.serial.connected and confirmed_volume != audio.volume_percent * 10:
+        audio_detail += " · 等待音量同步"
     if telemetry.host_capture_restart_count:
         audio_detail += f" · 回环重启 {telemetry.host_capture_restart_count}"
     if audio.last_error:
@@ -100,8 +108,15 @@ def present(snapshot: UiSnapshot) -> MainWindowViewModel:
         audio_source=audio.selected_source,
         audio_settings=settings,
         audio_start_enabled=(
-            audio.enabled and snapshot.serial.connected and not audio.transmitting
+            audio.enabled and snapshot.serial.connected
+            and snapshot.serial.volume_supported is True
+            and not audio.transmitting
         ),
         audio_stop_enabled=audio.transmitting,
         audio_controls_enabled=audio.enabled,
+        audio_volume_percent=audio.volume_percent,
+        audio_volume_enabled=(
+            audio.enabled and snapshot.serial.connected
+            and snapshot.serial.volume_supported is True
+        ),
     )

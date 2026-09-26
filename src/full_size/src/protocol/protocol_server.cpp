@@ -79,7 +79,7 @@ bool ProtocolServer::sendHelloAck(uint32_t requestSequence,
   uint8_t payload[8] = {};
   writeU16(&payload[0], kProtocolMaximumPayload);
   writeU16(&payload[2], bufferSamples);
-  writeU32(&payload[4], 0x00000003U);
+  writeU32(&payload[4], 0x00000007U);
   return sendFrame(ProtocolMessageType::kHelloAck, kIsAck, payload,
                    sizeof(payload));
 }
@@ -132,7 +132,7 @@ bool ProtocolServer::sendStatus(const ProtocolStatus& status) {
   writeU32(&payload[20], status.sequenceGapCount);
   writeU32(&payload[24], status.timerSkippedSamples);
   writeU16(&payload[28], status.lastAudioAgeMs);
-  writeU16(&payload[30], 0);
+  writeU16(&payload[30], status.targetVolumePermille);
   return sendFrame(ProtocolMessageType::kStatus, 0, payload, sizeof(payload));
 }
 

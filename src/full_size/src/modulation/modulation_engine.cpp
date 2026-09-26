@@ -91,6 +91,19 @@ AudioDriveMode ModulationEngine::audioDriveMode() const {
   return audioDriveMode_;
 }
 
+void ModulationEngine::setAudioVolume(uint16_t permille, bool immediate) {
+  audioVolume_.setTargetPermille(permille, immediate);
+}
+
+uint16_t ModulationEngine::targetVolumePermille() const {
+  return audioVolume_.targetPermille();
+}
+
+bool ModulationEngine::audioOutputMuted() const {
+  return (mode_ == Mode::kEmbeddedAudio || mode_ == Mode::kStreamAudio) &&
+         audioVolume_.off();
+}
+
 ModulationFrame ModulationEngine::nextFrame() {
   switch (mode_) {
     case Mode::kEnvelopeTone:
@@ -99,12 +112,14 @@ ModulationFrame ModulationEngine::nextFrame() {
       uint8_t sample = 128;
       const AudioReadStatus status = flashAudioSource_.readSample(&sample);
       if (status == AudioReadStatus::kIdle) return {};
+      audioVolume_.advance(1);
       ModulationFrame frame = {
           status == AudioReadStatus::kCompleted
               ? ModulationFrameStatus::kCompleted
               : ModulationFrameStatus::kRunning,
           audioModulator_.dutyForSample(sample, audioModulationMode_,
-                                        audioProcessingMode_, audioDriveMode_),
+                                        audioProcessingMode_, audioDriveMode_,
+                                        audioVolume_.currentGainQ15()),
           flashAudioSource_.info().sampleRate,
       };
       if (status == AudioReadStatus::kCompleted) mode_ = Mode::kOff;
@@ -118,10 +133,11 @@ ModulationFrame ModulationEngine::nextFrame() {
                 streamAudioSource_.sampleRateHz()};
       }
       if (status != AudioReadStatus::kSample) return {};
+      audioVolume_.advance(1);
       return {ModulationFrameStatus::kRunning,
               audioModulator_.dutyForSample(
                   sample, audioModulationMode_, audioProcessingMode_,
-                  audioDriveMode_),
+                  audioDriveMode_, audioVolume_.currentGainQ15()),
               streamAudioSource_.sampleRateHz()};
     }
     case Mode::kOff:
@@ -137,6 +153,7 @@ ModulationFrameStatus ModulationEngine::skipFrames(uint32_t frameCount) {
       status = envelopeModulator_.skipFrames(frameCount);
       break;
     case Mode::kEmbeddedAudio: {
+      audioVolume_.advance(frameCount);
       const AudioReadStatus sourceStatus =
           flashAudioSource_.skipSamples(frameCount);
       status = sourceStatus == AudioReadStatus::kCompleted
@@ -145,6 +162,7 @@ ModulationFrameStatus ModulationEngine::skipFrames(uint32_t frameCount) {
       break;
     }
     case Mode::kStreamAudio: {
+      audioVolume_.advance(frameCount);
       const AudioReadStatus sourceStatus =
           streamAudioSource_.skipSamples(frameCount);
       status = sourceStatus == AudioReadStatus::kUnderrun

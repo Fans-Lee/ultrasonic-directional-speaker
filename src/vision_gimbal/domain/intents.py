@@ -54,6 +54,19 @@ class SelectAudioSource(UserIntent):
 
 
 @dataclass(frozen=True)
+class SetAudioVolume(UserIntent):
+    percent: int
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.percent, bool)
+            or not isinstance(self.percent, int)
+            or not 0 <= self.percent <= 100
+        ):
+            raise ValueError("audio volume must be in [0, 100]")
+
+
+@dataclass(frozen=True)
 class ManualKeyChanged(UserIntent):
     direction: ManualDirection
     pressed: bool
@@ -77,6 +90,7 @@ Intent = (
     | StopAudio
     | ConfigureAudio
     | SelectAudioSource
+    | SetAudioVolume
     | ManualKeyChanged
     | ClearManualKeys
     | ShutdownRequested

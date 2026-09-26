@@ -15,6 +15,7 @@ enum class ProtocolMessageType : uint8_t {
   kSetMute = 0x05,
   kGimbalSetpoint = 0x06,
   kPing = 0x07,
+  kSetVolume = 0x08,
   kHelloAck = 0x81,
   kCommandAck = 0x82,
   kStatus = 0x83,
@@ -61,6 +62,7 @@ struct ProtocolStatus {
   uint32_t sequenceGapCount = 0;
   uint32_t timerSkippedSamples = 0;
   uint16_t lastAudioAgeMs = 0;
+  uint16_t targetVolumePermille = 1000;
 };
 
 }  // namespace ultrasonic

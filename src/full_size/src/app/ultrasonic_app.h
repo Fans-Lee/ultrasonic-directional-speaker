@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <Arduino.h>
 #include "driver/gptimer.h"
 #include "esp_err.h"
@@ -42,6 +43,8 @@ class UltrasonicApp final {
     kStreamStart,
     kStreamStop,
     kProtocolMute,
+    kLocalVolume,
+    kProtocolVolume,
     kProtocolHello,
   };
 
@@ -130,10 +133,13 @@ class UltrasonicApp final {
   size_t poseInputLength_ = 0;
   bool numericInputActive_ = false;
   bool numericInputOverflow_ = false;
+  bool volumeInputActive_ = false;
   bool poseInputActive_ = false;
   bool poseInputOverflow_ = false;
   bool protocolCaptureActive_ = false;
   bool protocolMuted_ = true;
+  std::atomic<uint16_t> reportedVolumePermille_{1000};
+  std::atomic<bool> reportedAudioVolumeOff_{false};
   bool protocolTimeoutQueued_ = false;
   bool sampleTimerRunning_ = false;
   ProtocolStreamState protocolStreamState_ = ProtocolStreamState::kIdle;

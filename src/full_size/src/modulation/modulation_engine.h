@@ -1,6 +1,7 @@
 #pragma once
 
 #include "audio_modulator.h"
+#include "audio_volume.h"
 #include "envelope_modulator.h"
 #include "modulation_types.h"
 #include "../audio/flash_audio_source.h"
@@ -26,6 +27,9 @@ class ModulationEngine final {
   AudioProcessingMode audioProcessingMode() const;
   void setAudioDriveMode(AudioDriveMode mode);
   AudioDriveMode audioDriveMode() const;
+  void setAudioVolume(uint16_t permille, bool immediate);
+  uint16_t targetVolumePermille() const;
+  bool audioOutputMuted() const;
   ModulationFrame nextFrame();
   ModulationFrameStatus skipFrames(uint32_t frameCount);
   AudioInfo audioInfo() const;
@@ -40,6 +44,7 @@ class ModulationEngine final {
 
   EnvelopeModulator envelopeModulator_;
   AudioModulator audioModulator_;
+  AudioVolume audioVolume_;
   FlashAudioSource flashAudioSource_;
   StreamAudioSource streamAudioSource_;
   Mode mode_ = Mode::kOff;

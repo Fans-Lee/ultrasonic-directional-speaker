@@ -59,27 +59,36 @@ bool AudioModulator::begin(const DutyConfig& dutyConfig) {
 
 uint32_t AudioModulator::dutyForSample(
     uint8_t sample, AudioModulationMode modulationMode,
-    AudioProcessingMode processingMode, AudioDriveMode driveMode) const {
+    AudioProcessingMode processingMode, AudioDriveMode driveMode,
+    uint32_t gainQ15) const {
   if (!initialized_) return 0;
+  if (gainQ15 == 0) return 0;
   const uint8_t processedSample =
       processingMode == AudioProcessingMode::kLoudnessEnhanced
           ? loudnessLut_[sample]
           : sample;
+  const int32_t scaledSigned =
+      (static_cast<int32_t>(processedSample) - 128) *
+      static_cast<int32_t>(gainQ15);
+  const int32_t rounded = scaledSigned >= 0
+                              ? (scaledSigned + 16384) / 32768
+                              : -((-scaledSigned + 16384) / 32768);
+  const uint8_t scaledSample = static_cast<uint8_t>(128 + rounded);
   if (driveMode == AudioDriveMode::kBoost) {
     switch (modulationMode) {
       case AudioModulationMode::kSram:
-        return boostSramModulator_.dutyForSample(processedSample);
+        return boostSramModulator_.dutyForSample(scaledSample);
       case AudioModulationMode::kDsbAm:
       default:
-        return boostDsbAmModulator_.dutyForSample(processedSample);
+        return boostDsbAmModulator_.dutyForSample(scaledSample);
     }
   }
   switch (modulationMode) {
     case AudioModulationMode::kSram:
-      return standardSramModulator_.dutyForSample(processedSample);
+      return standardSramModulator_.dutyForSample(scaledSample);
     case AudioModulationMode::kDsbAm:
     default:
-      return standardDsbAmModulator_.dutyForSample(processedSample);
+      return standardDsbAmModulator_.dutyForSample(scaledSample);
   }
 }
 

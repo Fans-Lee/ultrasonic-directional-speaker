@@ -239,6 +239,30 @@ QCheckBox#boostToggle::indicator:checked {
     border-color: #99f6e4;
 }
 
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #304460;
+    border-radius: 3px;
+}
+
+QSlider::sub-page:horizontal {
+    background: #22b8d4;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    width: 16px;
+    margin: -6px 0;
+    background: #d7f9ff;
+    border: 2px solid #0e7490;
+    border-radius: 8px;
+}
+
+QSlider::handle:horizontal:disabled {
+    background: #657894;
+    border-color: #344966;
+}
+
 QTabWidget::pane {
     border: none;
     background: transparent;
